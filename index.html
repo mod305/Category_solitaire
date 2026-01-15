@@ -975,16 +975,51 @@
                 this.difficulty = 'NORMAL';
             }
 
+            setDifficulty(diff) {
+                this.difficulty = diff;
+                this.setupGame(false);
+                this.ui.update(this.state);
+            }
+
             start() {
-                this.setupGame();
+                this.setupGame(false); // First start: Normal (Default)
                 this.ui.init();
                 this.ui.update(this.state);
             }
 
-            setupGame() {
-                // 1. Randomize Category Count (4 to 8)
+            setupGame(randomizeDifficulty = false) {
+                // Initialize difficulty logic
+                const difficulties = ['EASY', 'NORMAL', 'HARD', 'EXTREME'];
+
+                // If randomize requested OR difficulty is logicially missing/invalid, pick random
+                if (randomizeDifficulty || !this.difficulty) {
+                    this.difficulty = difficulties[Math.floor(Math.random() * difficulties.length)];
+                }
+
+                let minCats = 4, maxCats = 6, turnMultiplier = 2.0;
+
+                switch (this.difficulty) {
+                    case 'EASY':
+                        minCats = 4; maxCats = 5; turnMultiplier = 2.0;
+                        break;
+                    case 'NORMAL':
+                        minCats = 4; maxCats = 6; turnMultiplier = 2.0;
+                        break;
+                    case 'HARD':
+                        minCats = 5; maxCats = 7; turnMultiplier = 1.5;
+                        break;
+                    case 'EXTREME':
+                        minCats = 6; maxCats = 8; turnMultiplier = 1.1;
+                        break;
+                    default:
+                        minCats = 4; maxCats = 6; turnMultiplier = 2.0;
+                }
+
+                console.log(`[Game] Setup with ${this.difficulty}, Multiplier: ${turnMultiplier}`);
+
+                // 1. Randomize Category Count
                 const poolKeys = Object.keys(CATEGORIES_POOL);
-                const numCats = 4 + Math.floor(Math.random() * 5); // 4, 5, 6, 7, 8
+                const numCats = minCats + Math.floor(Math.random() * (maxCats - minCats + 1));
 
                 // Shuffle pool keys
                 for (let i = poolKeys.length - 1; i > 0; i--) {
@@ -1019,7 +1054,6 @@
                 });
 
                 // 3. Calculate Turns
-                // Based on difficulty multiplier
                 this.state.turnsLeft = Math.ceil(totalCards * turnMultiplier);
 
                 // 4. Initialize Deck
@@ -1099,8 +1133,7 @@
                         turnsLeft: 0,
                         gameOver: false
                     };
-                    // Restart logic: Force Random Difficulty
-                    this.setupGame(true);
+                    this.setupGame(true); // Restart = Random Difficulty
                     this.ui.update(this.state);
                 }
             }
@@ -1239,22 +1272,6 @@
 
                     this.ui.update(this.state);
                 }
-            }
-
-            checkWinCondition() {
-                // 1. Deck Empty?
-                if (this.state.deck.length > 0) return;
-                // 2. Open Pile Empty?
-                if (this.state.openPile.length > 0) return;
-                // 3. Tableau Empty?
-                const tableauHasCards = this.state.tableauSlots.some(pile => pile.length > 0);
-                if (tableauHasCards) return;
-                // 4. Sorting Slots Empty? (Because completed ones are cleared!)
-                const sortingHasCards = this.state.sortingSlots.some(pile => pile.length > 0);
-                if (sortingHasCards) return;
-
-                // Win!
-                setTimeout(() => alert("축하합니다! 모든 카드를 완벽하게 정리했습니다!"), 100);
             }
 
             getCollectedCount(catId) {
