@@ -1006,37 +1006,54 @@
                     this.difficulty = difficulties[Math.floor(Math.random() * difficulties.length)];
                 }
 
-                let minCats = 4, maxCats = 6, turnMultiplier = 2.0;
+                let catMultiplier = 1.5;
+                let turnMultiplier = 2.0;
 
+                // User Specified Formulas:
+                // Category Count = Sorting Slots (4) * Percentage
+                // Turns = Min Turns * Multiplier
+                // Min Turns = Cards in Deck (Total - Tableau)
                 switch (this.difficulty) {
                     case 'EASY':
-                        minCats = 4; maxCats = 5; turnMultiplier = 2.0;
+                        catMultiplier = 1.5; // 4 * 1.5 = 6
+                        turnMultiplier = 2.0;
                         break;
                     case 'NORMAL':
-                        minCats = 4; maxCats = 6; turnMultiplier = 2.0;
+                        catMultiplier = 2.5; // 4 * 2.5 = 10
+                        turnMultiplier = 1.6; // Slightly more generous than 1.5
                         break;
                     case 'HARD':
-                        minCats = 5; maxCats = 7; turnMultiplier = 1.5;
+                        catMultiplier = 3.5; // 4 * 3.5 = 14
+                        turnMultiplier = 1.2;
                         break;
                     case 'EXTREME':
-                        minCats = 6; maxCats = 8; turnMultiplier = 1.1;
+                        catMultiplier = 5.0; // 4 * 5.0 = 20
+                        turnMultiplier = 1.0; // Accurate One Pass
                         break;
                     default:
-                        minCats = 4; maxCats = 6; turnMultiplier = 2.0;
+                        catMultiplier = 2.5;
+                        turnMultiplier = 1.6;
                 }
 
-                console.log(`[Game] Setup with ${this.difficulty}, Multiplier: ${turnMultiplier}`);
+                // Fine adjustments
+                if (this.difficulty === 'NORMAL') turnMultiplier = 1.5;
+                if (this.difficulty === 'HARD') turnMultiplier = 1.1;
 
-                // 1. Randomize Category Count
+                const numCats = Math.floor(4 * catMultiplier);
+
+                console.log(`[Game] Setup ${this.difficulty}: Cats=${numCats}, TurnMult=${turnMultiplier}`);
+
+                // 1. Randomize Category Selection
                 const poolKeys = Object.keys(CATEGORIES_POOL);
-                const numCats = minCats + Math.floor(Math.random() * (maxCats - minCats + 1));
 
                 // Shuffle pool keys
                 for (let i = poolKeys.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [poolKeys[i], poolKeys[j]] = [poolKeys[j], poolKeys[i]];
                 }
-                const selectedKeys = poolKeys.slice(0, numCats);
+
+                const safeNumCats = Math.min(numCats, poolKeys.length);
+                const selectedKeys = poolKeys.slice(0, safeNumCats);
 
                 // 2. Setup Active Categories
                 this.activeCategories = {};
@@ -1046,8 +1063,7 @@
                     const template = CATEGORIES_POOL[key];
 
                     // Random Item Count (3 to 8)
-                    let itemCount = 3 + Math.floor(Math.random() * 6); // 3, 4, 5, 6, 7, 8
-                    // Ensure we don't exceed available items
+                    let itemCount = 3 + Math.floor(Math.random() * 6);
                     itemCount = Math.min(itemCount, template.items.length);
 
                     // Image Mode Change (20%)
@@ -1063,11 +1079,19 @@
                     totalCards += (1 + itemCount); // 1 Key + Items
                 });
 
-                // 3. Calculate Turns
-                this.state.turnsLeft = Math.ceil(totalCards * turnMultiplier);
-
-                // 4. Initialize Deck
+                // 3. Initialize Deck (Create Card Objects)
                 this.initializeDeck();
+                // Note: Deck is created but not dealt. totalCards is accurate.
+
+                // 4. Calculate Turns based on "Minimum Turns"
+                // Minimum Draws needed = Cards in Deck AFTER DEAL
+                // We deal 40% of cards to Tableau.
+                const cardsToDeal = Math.floor(totalCards * 0.4);
+                const cardsInDeck = totalCards - cardsToDeal;
+
+                console.log(`[Turn Calc] Total: ${totalCards}, Deal: ${cardsToDeal}, Deck: ${cardsInDeck} (MinTurns)`);
+
+                this.state.turnsLeft = Math.ceil(cardsInDeck * turnMultiplier);
 
                 // 5. Deal
                 this.dealInitialCards();
