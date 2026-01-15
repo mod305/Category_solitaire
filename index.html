@@ -279,105 +279,219 @@
         }
 
         /* --- MOBILE RESPONSIVE --- */
-        @media (max-width: 768px) {
+
+        /* 1. PORTRAIT (Vertical Layout) - Optimized for One Hand / Long View */
+        @media (max-width: 768px) and (orientation: portrait) {
             :root {
-                --card-width: 60px;
-                --card-height: 84px;
+                /* Use vmin to ensure it fits width */
+                --card-width: 20vw;
+                --card-height: 28vw;
                 /* Ratio 1.4 */
-                --gap: 8px;
-                --card-radius: 6px;
+                --gap: 2vw;
+                --card-radius: 4px;
             }
 
             #app {
                 display: flex;
                 flex-direction: column;
                 height: 100vh;
-                padding: 10px;
+                height: 100dvh;
+                /* Dynamic Viewport Height for mobile browsers */
+                padding: 10px 5px;
                 gap: 10px;
-                overflow-y: auto;
-                /* Allow scrolling if needed, though we try to fit */
+                overflow: hidden;
+                /* Prevent body scroll, handle inside tableau */
+                box-sizing: border-box;
             }
 
+            /* TOP: Control Bar (Turns, Restart) */
             .left-panel {
                 width: 100%;
+                height: 40px;
                 flex-direction: row;
                 justify-content: space-between;
                 align-items: center;
-                padding: 0;
+                padding: 0 10px;
                 order: 1;
-                /* Turn info at top */
+                flex: none;
             }
 
             .left-panel>div {
                 flex-direction: row !important;
-                width: 100%;
-                justify-content: space-between;
+                width: auto;
+                gap: 10px;
+            }
+
+            .turn-counter {
+                height: auto;
+                padding: 5px 10px;
+                flex-direction: row;
             }
 
             .restart-btn {
                 margin: 0;
+                padding: 5px 10px;
                 width: auto;
-                padding: 0 20px;
+                font-size: 0.8rem;
             }
 
-            .turn-counter {
-                height: 40px;
-                width: auto;
-                padding: 0 20px;
-                flex-direction: row;
-                gap: 10px;
-            }
-
-            .turn-counter .label {
-                margin: 0;
-            }
-
-            .turn-counter .value {
-                font-size: 1.2rem;
-            }
-
+            /* MIDDLE: Board */
             .center-board {
                 width: 100%;
                 order: 2;
-                gap: 20px;
                 flex: 1;
+                /* Take remaining space */
+                gap: 10px;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                /* Contain inner scroll */
             }
 
-            /* Adjust grid for mobile */
-            .sorting-area,
-            .tableau-area {
+            .sorting-area {
+                /* Top of Board */
                 grid-template-columns: repeat(4, var(--card-width));
                 gap: var(--gap);
+                padding-bottom: 5px;
+                flex: none;
+                /* Fixed height */
+                justify-content: center;
             }
 
             .tableau-area {
-                min-height: 300px;
+                /* Main Area */
+                grid-template-columns: repeat(4, var(--card-width));
+                gap: var(--gap);
+                flex: 1;
+                overflow-y: auto;
+                /* Scroll ONLY the tableau columns if needed */
+                min-height: 0;
+                justify-content: center;
+                padding-top: 10px;
             }
 
+            /* Remove Bases visual noise in compact mode */
+            .slot-base {
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+
+            /* BOTTOM: Deck & Grave */
             .right-panel {
                 order: 3;
                 width: 100%;
+                height: 90px;
+                /* Fixed height for touch target */
+                flex-direction: row;
                 justify-content: center;
-                padding: 10px 0;
+                align-items: center;
+                gap: 30px;
+                padding: 0;
+                flex: none;
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 12px;
             }
 
-            /* Adjust font sizes */
+            /* Adjust Fonts */
             .card {
-                font-size: 0.8rem;
-                padding: 4px;
+                font-size: 0.75rem;
+                padding: 2px;
+                border-width: 1px;
             }
 
-            .sorting-slot::before {
-                font-size: 0.7rem;
-                top: -40px;
+            .label {
+                font-size: 0.7rem !important;
             }
 
             .key-counter {
                 font-size: 0.6rem;
+                bottom: 2px;
+                right: 2px;
+            }
+
+            .sorting-slot::before {
+                display: none;
+            }
+
+            /* Hide helper text on mobile to save space */
+        }
+
+        /* 2. LANDSCAPE (Horizontal Layout) - Scaled Down Desktop View */
+        @media (max-width: 900px) and (orientation: landscape) {
+            :root {
+                /* Smaller fixed size for landscape mobile */
+                --card-width: 60px;
+                --card-height: 84px;
+                --gap: 8px;
+            }
+
+            #app {
+                display: grid;
+                grid-template-columns: 80px 1fr 100px;
+                /* Compact columns */
+                height: 100vh;
+                height: 100dvh;
+                padding: 5px;
+                gap: 5px;
+                overflow: hidden;
+            }
+
+            /* Left: Controls */
+            .left-panel {
+                order: 1;
+                padding: 0;
+                justify-content: center;
+            }
+
+            .turn-counter {
+                width: 100%;
+                padding: 5px;
+                font-size: 0.8rem;
+            }
+
+            .restart-btn {
+                width: 100%;
+                margin-top: 10px;
+                padding: 5px;
+                font-size: 0.8rem;
+            }
+
+            /* Center: Board */
+            .center-board {
+                order: 2;
+                gap: 5px;
+            }
+
+            .sorting-area,
+            .tableau-area {
+                grid-template-columns: repeat(4, var(--card-width));
+                gap: var(--gap);
+                justify-content: center;
+            }
+
+            .tableau-area {
+                padding-top: 10px;
+                overflow-y: auto;
+            }
+
+            /* Right: Deck */
+            .right-panel {
+                order: 3;
+                padding: 10px 0;
+                gap: 15px;
+            }
+
+            .card {
+                font-size: 0.7rem;
             }
 
             .label {
-                font-size: 0.6rem !important;
+                font-size: 0.65rem !important;
+            }
+
+            .sorting-slot::before {
+                opacity: 0.5;
+                font-size: 0.6rem;
+                top: -15px;
             }
         }
     </style>
@@ -842,8 +956,9 @@
                 });
 
                 // 3. Calculate Turns
-                // Heuristic: TotalCards * 2.5
-                this.state.turnsLeft = Math.ceil(totalCards * 2.5);
+                // Previous: TotalCards * 2.5
+                // New: TotalCards * 1.8 (Harder)
+                this.state.turnsLeft = Math.ceil(totalCards * 1.8);
 
                 // 4. Initialize Deck
                 this.initializeDeck();
