@@ -1086,7 +1086,9 @@
 
                 // 5. Calculate Turns based on Perfect Play Simulation
                 console.log("[Turn Calc] Starting Perfect Play Simulation...");
-                const minTurns = this.calculateMinimumTurns();
+                // Emergency Bypass
+                // const minTurns = this.calculateMinimumTurns();
+                const minTurns = 45;
 
                 // Additive Buffer Calculation
                 this.state.turnsLeft = minTurns + turnBuffer;
