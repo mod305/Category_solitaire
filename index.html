@@ -278,6 +278,52 @@
             display: none;
         }
 
+        /* --- DIFFICULTY UI --- */
+        .difficulty-selector {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+
+        .diff-btn {
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            color: white;
+            opacity: 0.6;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+
+        .diff-btn.active {
+            opacity: 1;
+            transform: scale(1.05);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .diff-easy {
+            background-color: #4CAF50;
+        }
+
+        /* Green */
+        .diff-normal {
+            background-color: #2196F3;
+        }
+
+        /* Blue */
+        .diff-hard {
+            background-color: #FF9800;
+        }
+
+        /* Orange */
+        .diff-extreme {
+            background-color: #E91E63;
+        }
+
+        /* Pink */
+
         /* --- MOBILE RESPONSIVE --- */
 
         /* 1. PORTRAIT (Vertical Layout) - Optimized for One Hand / Long View */
@@ -501,11 +547,21 @@
     <div id="app">
         <!-- 1. LEFT PANEL: Turn Counter -->
         <div class="left-panel">
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button id="restart-btn" class="restart-btn">재시작</button>
-                <div class="turn-counter">
-                    <span class="label">남은 턴</span>
-                    <span id="turns-value" class="value">0</span>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+                <!-- Difficulty Selector -->
+                <div class="difficulty-selector" id="diff-selector">
+                    <button class="diff-btn diff-easy" data-diff="EASY">쉬움</button>
+                    <button class="diff-btn diff-normal active" data-diff="NORMAL">보통</button>
+                    <button class="diff-btn diff-hard" data-diff="HARD">어려움</button>
+                    <button class="diff-btn diff-extreme" data-diff="EXTREME">극악</button>
+                </div>
+
+                <div style="display: flex; flex-direction: row; gap: 10px; align-items: center;">
+                    <button id="restart-btn" class="restart-btn">재시작</button>
+                    <div class="turn-counter">
+                        <span class="label">남은 턴</span>
+                        <span id="turns-value" class="value">0</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -567,6 +623,20 @@
 
             init() {
                 this.renderLayout();
+                this.setupDifficultyUI();
+            }
+
+            setupDifficultyUI() {
+                const buttons = document.querySelectorAll('.diff-btn');
+                buttons.forEach(btn => {
+                    btn.onclick = () => {
+                        // Update UI
+                        buttons.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        // Update Game Config and Restart
+                        this.game.setDifficulty(btn.dataset.diff);
+                    };
+                });
             }
 
             renderLayout() {
