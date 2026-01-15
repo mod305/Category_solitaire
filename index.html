@@ -1088,10 +1088,10 @@
                 console.log("[Turn Calc] Starting Perfect Play Simulation...");
                 const minTurns = this.calculateMinimumTurns();
 
-                // Diff Config Multiplier is already set
-                this.state.turnsLeft = Math.ceil(minTurns * turnMultiplier);
+                // Additive Buffer Calculation
+                this.state.turnsLeft = minTurns + turnBuffer;
 
-                console.log(`[Game] Setup ${this.difficulty}: Turns=${this.state.turnsLeft} (Sim ${minTurns} * ${turnMultiplier})`);
+                console.log(`[Game] Setup ${this.difficulty}: Turns=${this.state.turnsLeft} (Sim ${minTurns} + ${turnBuffer})`);
             }
 
             initializeDeck() {
@@ -1218,11 +1218,13 @@
                 while (cycle < maxcycles) {
                     let progressMade = false;
 
-                    // Phase 1: Tableau Auto-Play (Free Actions)
-                    // Continually check if any top card of Tableau can go to Sorting
+                    // Phase 1: Tableau Consoldiation & Auto-Play
+                    // Continually check if any top card of Tableau can go to Sorting OR other Tableau
                     let tableuChanged = true;
                     while (tableuChanged) {
                         tableuChanged = false;
+
+                        // 1a. Tableau -> Sorting
                         for (let i = 0; i < 4; i++) {
                             const col = simTableau[i];
                             if (col.length > 0) {
@@ -1231,8 +1233,37 @@
                                     doSort(col.pop());
                                     tableuChanged = true;
                                     progressMade = true;
-                                    // If col not empty, new top is revealed (simulated face up)
+                                    continue; // Restart loop to see if new top is sortable
                                 }
+                            }
+                        }
+                        if (tableuChanged) continue;
+
+                        // 1b. Tableau -> Tableau (Consolidation)
+                        // Move card from Col A to Col B if it helps (stacks matching category).
+                        // This reduces waste significantly.
+                        for (let i = 0; i < 4; i++) {
+                            const sourceCol = simTableau[i];
+                            if (sourceCol.length > 0) {
+                                const card = sourceCol[sourceCol.length - 1];
+
+                                // Try finding a target col with matching top
+                                for (let j = 0; j < 4; j++) {
+                                    if (i === j) continue;
+                                    const targetCol = simTableau[j];
+
+                                    if (targetCol.length > 0) {
+                                        const targetTop = targetCol[targetCol.length - 1];
+                                        if (targetTop.type !== 'KEY' && targetTop.category === card.category) {
+                                            // Valid Merge!
+                                            targetCol.push(sourceCol.pop());
+                                            tableuChanged = true;
+                                            progressMade = true;
+                                            break; // Break inner, restart outer
+                                        }
+                                    }
+                                }
+                                if (tableuChanged) break;
                             }
                         }
                     }
