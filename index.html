@@ -539,18 +539,10 @@
         </div>
     </div>
 
+    <script src="js/categories.js"></script>
     <script>
         // --- CONSTANTS ---
-        const CATEGORIES_POOL = {
-            FRUIT: { id: 'FRUIT', label: '과일', color: '#e57373', items: ['사과', '바나나', '체리', '포도', '레몬', '오렌지', '복숭아', '배'], emojis: ['🍎', '🍌', '🍒', '🍇', '🍋', '🍊', '🍑', '🍐'] },
-            ANIMAL: { id: 'ANIMAL', label: '동물', color: '#81c784', items: ['고양이', '강아지', '곰', '사자', '호랑이', '토끼', '여우', '늑대'], emojis: ['🐱', '🐶', '🐻', '🦁', '🐯', '🐰', '🦊', '🐺'] },
-            VEHICLE: { id: 'VEHICLE', label: '탈것', color: '#64b5f6', items: ['자동차', '버스', '기차', '자전거', '배', '비행기', '트럭', '택시'], emojis: ['🚗', '🚌', '🚂', '🚲', '🚢', '✈️', '🚚', '🚕'] },
-            FURNITURE: { id: 'FURNITURE', label: '가구', color: '#ffb74d', items: ['의자', '책상', '침대', '소파', '식탁', '램프', '선반', '옷장'], emojis: ['🪑', ' desk', '🛏️', '🛋️', '🍽️', '💡', 'shelf', '🚪'] }, // Emulated emojis for some
-            JOB: { id: 'JOB', label: '직업', color: '#ba68c8', items: ['의사', '경찰', '소방관', '요리사', '선생님', '가수', '배우', '화가'], emojis: ['👨‍⚕️', '👮', '👨‍🚒', '👨‍🍳', '👨‍🏫', '🎤', '🎭', '🎨'] },
-            NATURE: { id: 'NATURE', label: '자연', color: '#4db6ac', items: ['나무', '꽃', '강', '산', '구름', '비', '눈', '바다'], emojis: ['🌳', '🌸', '🌊', '⛰️', '☁️', '🌧️', '❄️', '🌊'] },
-            HOBBY: { id: 'HOBBY', label: '취미', color: '#f06292', items: ['축구', '야구', '농구', '독서', '게임', '낚시', '요리', '여행'], emojis: ['⚽', '⚾', '🏀', '📚', '🎮', '🎣', '🍳', '✈️'] },
-            FOOD: { id: 'FOOD', label: '음식', color: '#a1887f', items: ['피자', '햄버거', '치킨', '국수', '밥', '빵', '케이크', '아이스크림'], emojis: ['🍕', '🍔', '🍗', '🍜', '🍚', '🍞', '🍰', '🍦'] },
-        };
+        // CATEGORIES_POOL is now loaded from js/categories.js
 
         const CARD_TYPES = {
             KEY: 'KEY',
