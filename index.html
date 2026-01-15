@@ -1083,18 +1083,17 @@
                 this.initializeDeck();
                 // Note: Deck is created but not dealt. totalCards is accurate.
 
-                // 4. Calculate Turns based on "Minimum Turns"
-                // Minimum Draws needed = Cards in Deck AFTER DEAL
-                // We deal 40% of cards to Tableau.
-                const cardsToDeal = Math.floor(totalCards * 0.4);
-                const cardsInDeck = totalCards - cardsToDeal;
-
-                console.log(`[Turn Calc] Total: ${totalCards}, Deal: ${cardsToDeal}, Deck: ${cardsInDeck} (MinTurns)`);
-
-                this.state.turnsLeft = Math.ceil(cardsInDeck * turnMultiplier);
-
-                // 5. Deal
+                // 4. Deal (Must deal BEFORE calc to set up initial state)
                 this.dealInitialCards();
+
+                // 5. Calculate Turns based on Perfect Play Simulation
+                console.log("[Turn Calc] Starting Perfect Play Simulation...");
+                const minTurns = this.calculateMinimumTurns();
+
+                // Diff Config Multiplier is already set
+                this.state.turnsLeft = Math.ceil(minTurns * turnMultiplier);
+
+                console.log(`[Game] Setup ${this.difficulty}: Turns=${this.state.turnsLeft} (Sim ${minTurns} * ${turnMultiplier})`);
             }
 
             initializeDeck() {
