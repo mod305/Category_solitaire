@@ -1096,10 +1096,12 @@
                         openPile: [],
                         sortingSlots: [[], [], [], []],
                         tableauSlots: [[], [], [], []],
-                        turnsLeft: 0, // Will be set in setupGame
+                        turnsLeft: 0,
                         gameOver: false
                     };
-                    this.start(); // Triggers setupGame(true) -> Random Difficulty
+                    // Restart logic: Force Random Difficulty
+                    this.setupGame(true);
+                    this.ui.update(this.state);
                 }
             }
 
