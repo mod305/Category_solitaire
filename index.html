@@ -676,6 +676,16 @@
             update(state) {
                 this.turnsValue.textContent = state.turnsLeft;
 
+                // Sync Difficulty UI
+                const diffButtons = document.querySelectorAll('.diff-btn');
+                diffButtons.forEach(btn => {
+                    if (btn.dataset.diff === this.game.difficulty) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+
                 // 1. Sorting Slots
                 state.sortingSlots.forEach((pile, i) => {
                     const slot = this.sortingArea.children[i];
