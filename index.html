@@ -1221,8 +1221,10 @@
                     // Phase 1: Tableau Consoldiation & Auto-Play
                     // Continually check if any top card of Tableau can go to Sorting OR other Tableau
                     let tableuChanged = true;
-                    while (tableuChanged) {
+                    let safetyLimit = 0;
+                    while (tableuChanged && safetyLimit < 50) {
                         tableuChanged = false;
+                        safetyLimit++;
 
                         // 1a. Tableau -> Sorting
                         for (let i = 0; i < 4; i++) {
@@ -1256,10 +1258,23 @@
                                         const targetTop = targetCol[targetCol.length - 1];
                                         if (targetTop.type !== 'KEY' && targetTop.category === card.category) {
                                             // Valid Merge!
-                                            targetCol.push(sourceCol.pop());
-                                            tableuChanged = true;
-                                            progressMade = true;
-                                            break; // Break inner, restart outer
+                                            // Anti-Ping-Pong Logic:
+                                            // Only move if we are exposing something new or emptying a column.
+                                            // If sourceCol has another card of SAME category underneath, moving does nothing but loop.
+                                            let helpful = true;
+                                            if (sourceCol.length > 1) {
+                                                const underCard = sourceCol[sourceCol.length - 2];
+                                                if (underCard.type === 'SUB' && underCard.category === card.category) {
+                                                    helpful = false; // Moving top matching card to another matching pile is circular
+                                                }
+                                            }
+
+                                            if (helpful) {
+                                                targetCol.push(sourceCol.pop());
+                                                tableuChanged = true;
+                                                progressMade = true;
+                                                break; // Break inner, restart outer
+                                            }
                                         }
                                     }
                                 }
