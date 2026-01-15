@@ -1018,9 +1018,8 @@
                 });
 
                 // 3. Calculate Turns
-                // Previous: TotalCards * 2.5
-                // New: TotalCards * 1.8 (Harder)
-                this.state.turnsLeft = Math.ceil(totalCards * 1.8);
+                // Based on difficulty multiplier
+                this.state.turnsLeft = Math.ceil(totalCards * turnMultiplier);
 
                 // 4. Initialize Deck
                 this.initializeDeck();
@@ -1090,15 +1089,16 @@
             }
 
             restart() {
-                if (confirm("게임을 재시작하시겠습니까?")) {
+                if (confirm("게임을 재시작하시겠습니까? (난이도가 무작위로 변경됩니다)")) {
                     this.state = {
                         deck: [],
                         openPile: [],
                         sortingSlots: [[], [], [], []],
                         tableauSlots: [[], [], [], []],
-                        turnsLeft: GAME_CONFIG.INITIAL_TURNS
+                        turnsLeft: 0, // Will be set in setupGame
+                        gameOver: false
                     };
-                    this.start();
+                    this.start(); // Triggers setupGame(true) -> Random Difficulty
                 }
             }
 
