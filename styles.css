@@ -1,0 +1,184 @@
+:root {
+    --bg-color: #1a1a2e;
+    --text-color: #ffffff;
+    --card-width: 100px;
+    --card-height: 140px;
+    --gap: 16px;
+    --primary-font: 'Outfit', sans-serif;
+    --card-radius: 12px;
+    --glass-bg: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.2);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--primary-font);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    padding: 24px;
+    max-width: 1200px;
+    width: 100%;
+}
+
+/* Header Area */
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    height: var(--card-height);
+}
+
+/* Turn Counter */
+.turn-counter {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: var(--card-width);
+    height: var(--card-height);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--card-radius);
+    backdrop-filter: blur(10px);
+}
+
+.turn-counter .label {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    margin-bottom: 4px;
+}
+
+.turn-counter .value {
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+/* Sorting Area (Center) */
+.sorting-area {
+    display: flex;
+    gap: var(--gap);
+}
+
+/* Graveyard Area (Right) */
+.graveyard-area {
+    width: var(--card-width);
+    height: var(--card-height);
+    cursor: pointer;
+}
+
+/* Tableau Area (Main) */
+.tableau-area {
+    display: flex;
+    justify-content: center; /* Center the tableau slots */
+    gap: var(--gap);
+    min-height: 400px; /* Space for piles */
+    margin-right: calc(var(--card-width) + 320px); /* Offset to start after Turn Counter + Space */
+    /* Wait, the user said "Sorting slots alignment matches Tableau". 
+       Sorting is between turns and graveyard.
+       So Tableau should align with Sorting.
+       Let's adjust alignment via grid or precise flex logic.
+    */
+    margin: 0 auto; /* Reset margin, let's fix alignment via matching container widths */
+    width: fit-content;
+}
+
+/* Unified Slot Styling */
+.slot {
+    width: var(--card-width);
+    height: var(--card-height);
+    border: 2px dashed var(--glass-border);
+    border-radius: var(--card-radius);
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition:  0.2s ease;
+}
+
+.sorting-area .slot::before {
+    content: attr(data-label);
+    position: absolute;
+    top: -25px;
+    width: 100%;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+    opacity: 0.8;
+    color: var(--text-color);
+}
+
+.tableau-column {
+    display: flex;
+    flex-direction: column;
+    width: var(--card-width);
+    position: relative;
+}
+
+.tableau-column .slot-base {
+    width: 100%;
+    height: var(--card-height);
+    border-radius: var(--card-radius);
+    background: rgba(0,0,0,0.2);
+    margin-bottom: -100%; /* Overlap trick basis */
+}
+
+/* Card Styling */
+.card {
+    width: var(--card-width);
+    height: var(--card-height);
+    border-radius: var(--card-radius);
+    background: white;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    cursor: grab;
+    position: absolute;
+    transition: top 0.2s ease, transform 0.2s ease;
+    font-weight: 600;
+    text-align: center;
+    border: 2px solid transparent;
+}
+
+.card:active {
+    cursor: grabbing;
+    transform: scale(1.05);
+    z-index: 100 !important;
+}
+
+.card.key-card {
+    border-width: 3px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.card-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--glass-bg);
+    border-radius: var(--card-radius);
+    color: rgba(255,255,255,0.5);
+}

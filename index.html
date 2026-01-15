@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>카테고리 솔리테어</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --text-color: #ffffff;
+            --card-width: 100px;
+            --card-height: 140px;
+            --gap: 16px;
+            --primary-font: 'Noto Sans KR', sans-serif;
+            --card-radius: 12px;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --glass-border-subtle: rgba(255, 255, 255, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--primary-font);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 
+           Layout Strategy: 
+           3-Column Grid: [Left: Turn] [Center: Game Board] [Right: Deck]
+           This ensures the Game Board (Sorting + Tableau) is isolated and aligned perfectly.
+        */
+        #app {
+            display: grid;
+            grid-template-columns: 140px auto 260px;
+            gap: 40px;
+            padding: 24px;
+            max-width: 1400px;
+            width: 100%;
+            height: 90vh;
+            align-items: start;
+        }
+
+        /* LEFT PANEL */
+        .left-panel {
+            display: flex;
+            justify-content: flex-start;
+            padding-top: 30px;
+            /* Visual alignment with top slots */
+        }
+
+        .turn-counter {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: var(--card-width);
+            height: var(--card-height);
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border-subtle);
+            border-radius: var(--card-radius);
+            backdrop-filter: blur(10px);
+        }
+
+        .turn-counter .label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-bottom: 4px;
+        }
+
+        .turn-counter .value {
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .restart-btn {
+            width: var(--card-width);
+            height: 40px;
+            background: rgba(255, 82, 82, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: var(--card-radius);
+            color: white;
+            font-family: var(--primary-font);
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 16px;
+            /* Space between button and counter */
+            transition: background 0.2s;
+        }
+
+        .restart-btn:hover {
+            background: rgba(255, 82, 82, 1);
+        }
+
+        /* CENTER BOARD */
+        .center-board {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            /* Vertical gap between Sorting Area and Tableau Area */
+            align-items: center;
+            width: 100%;
+        }
+
+        /* 
+           Crucial for Alignment:
+           Both Sorting Area and Tableau Area use the SAME Grid configuration.
+           This creates a "Room" of identical width and column positions.
+        */
+        .sorting-area,
+        .tableau-area {
+            display: grid;
+            grid-template-columns: repeat(4, var(--card-width));
+            gap: var(--gap);
+            justify-content: center;
+            width: 100%;
+        }
+
+        /* Tableau area needs height for the columns to expand downwards */
+        .tableau-area {
+            min-height: 400px;
+            align-items: start;
+        }
+
+        /* RIGHT PANEL */
+        .right-panel {
+            display: flex;
+            justify-content: flex-end;
+            padding-top: 30px;
+        }
+
+        .deck-area {
+            display: flex;
+            gap: var(--gap);
+        }
+
+        /* SLOTS & COLUMNS */
+        .slot {
+            width: var(--card-width);
+            height: var(--card-height);
+            border: 2px dashed var(--glass-border-subtle);
+            border-radius: var(--card-radius);
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .sorting-slot::before {
+            content: attr(data-label);
+            position: absolute;
+            top: -50px;
+            width: 100%;
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-color);
+            white-space: pre;
+            line-height: 1.4;
+        }
+
+        .tableau-column {
+            display: flex;
+            flex-direction: column;
+            width: var(--card-width);
+            position: relative;
+        }
+
+        .slot-base {
+            width: 100%;
+            height: var(--card-height);
+            border-radius: var(--card-radius);
+            background: rgba(0, 0, 0, 0.1);
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            /* Brighter Dashed Border */
+        }
+
+        /* --- CARD STYLING --- */
+        .card {
+            width: var(--card-width);
+            height: var(--card-height);
+            border-radius: var(--card-radius);
+            padding: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            cursor: grab;
+            position: absolute;
+            transition: top 0.2s ease, transform 0.2s ease;
+
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            /* Default: Center aligned */
+            align-items: center;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1rem;
+            padding-top: 10px;
+            /* Space for label visibility */
+
+            background-color: white;
+            z-index: 10;
+        }
+
+        .card.key-card {
+            background-color: #ffffff;
+            border: 3px solid #ff5252;
+            color: #d32f2f;
+            font-weight: 900;
+            font-weight: 900;
+            justify-content: space-between;
+            padding-top: 15px;
+            /* Keep specific padding for Key Card */
+            padding-bottom: 5px;
+        }
+
+        /* Key Card Counter */
+        .key-counter {
+            font-size: 0.8rem;
+            color: #d32f2f;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .card.sub-card {
+            background-color: #ffffff;
+            border: 2px solid #448aff;
+            color: #333;
+        }
+
+        /* When a card is stacked under another (Tableau), align to top to show label */
+        .card.stacked-view {
+            justify-content: flex-start !important;
+            padding-top: 8px;
+        }
+
+        .card:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+            z-index: 100 !important;
+        }
+
+        .card.back {
+            background-color: #E0D7D0;
+            border: 2px solid #BCAAA4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        /* Improved Rabbit Icon */
+        .card.back .rabbit-icon {
+            width: 60%;
+            height: 60%;
+            background-color: #3e2723;
+            -webkit-mask: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12,2C12,2 8,5 8,10C8,11.5 8.5,13 9,14C7,14 4,16 4,19C4,21 6,22 12,22C18,22 20,21 20,19C20,16 17,14 15,14C15.5,13 16,11.5 16,10C16,5 12,2 12,2M12,5C12.8,5 13.5,7 13.8,9C13.2,8.8 12.6,8.8 12,8.8C11.4,8.8 10.8,8.8 10.2,9C10.5,7 11.2,5 12,5Z"/></svg>') no-repeat center;
+            -webkit-mask-size: contain;
+            mask: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12,2C12,2 8,5 8,10C8,11.5 8.5,13 9,14C7,14 4,16 4,19C4,21 6,22 12,22C18,22 20,21 20,19C20,16 17,14 15,14C15.5,13 16,11.5 16,10C16,5 12,2 12,2M12,5C12.8,5 13.5,7 13.8,9C13.2,8.8 12.6,8.8 12,8.8C11.4,8.8 10.8,8.8 10.2,9C10.5,7 11.2,5 12,5Z"/></svg>') no-repeat center;
+            mask-size: contain;
+        }
+
+        .card.back span.label {
+            display: none;
+        }
+
+        /* --- MOBILE RESPONSIVE --- */
+        @media (max-width: 768px) {
+            :root {
+                --card-width: 60px;
+                --card-height: 84px;
+                /* Ratio 1.4 */
+                --gap: 8px;
+                --card-radius: 6px;
+            }
+
+            #app {
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                padding: 10px;
+                gap: 10px;
+                overflow-y: auto;
+                /* Allow scrolling if needed, though we try to fit */
+            }
+
+            .left-panel {
+                width: 100%;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0;
+                order: 1;
+                /* Turn info at top */
+            }
+
+            .left-panel>div {
+                flex-direction: row !important;
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .restart-btn {
+                margin: 0;
+                width: auto;
+                padding: 0 20px;
+            }
+
+            .turn-counter {
+                height: 40px;
+                width: auto;
+                padding: 0 20px;
+                flex-direction: row;
+                gap: 10px;
+            }
+
+            .turn-counter .label {
+                margin: 0;
+            }
+
+            .turn-counter .value {
+                font-size: 1.2rem;
+            }
+
+            .center-board {
+                width: 100%;
+                order: 2;
+                gap: 20px;
+                flex: 1;
+            }
+
+            /* Adjust grid for mobile */
+            .sorting-area,
+            .tableau-area {
+                grid-template-columns: repeat(4, var(--card-width));
+                gap: var(--gap);
+            }
+
+            .tableau-area {
+                min-height: 300px;
+            }
+
+            .right-panel {
+                order: 3;
+                width: 100%;
+                justify-content: center;
+                padding: 10px 0;
+            }
+
+            /* Adjust font sizes */
+            .card {
+                font-size: 0.8rem;
+                padding: 4px;
+            }
+
+            .sorting-slot::before {
+                font-size: 0.7rem;
+                top: -40px;
+            }
+
+            .key-counter {
+                font-size: 0.6rem;
+            }
+
+            .label {
+                font-size: 0.6rem !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <!-- 1. LEFT PANEL: Turn Counter -->
+        <div class="left-panel">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button id="restart-btn" class="restart-btn">재시작</button>
+                <div class="turn-counter">
+                    <span class="label">남은 턴</span>
+                    <span id="turns-value" class="value">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. CENTER BOARD: Sorting & Tableau -->
+        <div class="center-board">
+            <!-- Row 1: Sorting Slots -->
+            <div id="sorting-area" class="sorting-area">
+                <!-- Sorting Slots generated by JS -->
+            </div>
+
+            <!-- Row 2: Tableau Columns -->
+            <div id="tableau-area" class="tableau-area">
+                <!-- Deployment Slots -->
+            </div>
+        </div>
+
+        <!-- 3. RIGHT PANEL: Deck & Graveyard -->
+        <div class="right-panel">
+            <div class="deck-area">
+                <!-- Discard Pile (Open) -->
+                <div id="graveyard" class="slot" style="border-style: solid; border-color: rgba(255,255,255,0.1);">
+                    <!-- Face Up Cards go here -->
+                </div>
+
+                <!-- Draw Pile (Hidden) -->
+                <div id="deck-pile" class="slot" style="border: none;">
+                    <!-- Face Down Cards go here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONSTANTS ---
+        const CATEGORIES_POOL = {
+            FRUIT: { id: 'FRUIT', label: '과일', color: '#e57373', items: ['사과', '바나나', '체리', '포도', '레몬', '오렌지', '복숭아', '배'], emojis: ['🍎', '🍌', '🍒', '🍇', '🍋', '🍊', '🍑', '🍐'] },
+            ANIMAL: { id: 'ANIMAL', label: '동물', color: '#81c784', items: ['고양이', '강아지', '곰', '사자', '호랑이', '토끼', '여우', '늑대'], emojis: ['🐱', '🐶', '🐻', '🦁', '🐯', '🐰', '🦊', '🐺'] },
+            VEHICLE: { id: 'VEHICLE', label: '탈것', color: '#64b5f6', items: ['자동차', '버스', '기차', '자전거', '배', '비행기', '트럭', '택시'], emojis: ['🚗', '🚌', '🚂', '🚲', '🚢', '✈️', '🚚', '🚕'] },
+            FURNITURE: { id: 'FURNITURE', label: '가구', color: '#ffb74d', items: ['의자', '책상', '침대', '소파', '식탁', '램프', '선반', '옷장'], emojis: ['🪑', ' desk', '🛏️', '🛋️', '🍽️', '💡', 'shelf', '🚪'] }, // Emulated emojis for some
+            JOB: { id: 'JOB', label: '직업', color: '#ba68c8', items: ['의사', '경찰', '소방관', '요리사', '선생님', '가수', '배우', '화가'], emojis: ['👨‍⚕️', '👮', '👨‍🚒', '👨‍🍳', '👨‍🏫', '🎤', '🎭', '🎨'] },
+            NATURE: { id: 'NATURE', label: '자연', color: '#4db6ac', items: ['나무', '꽃', '강', '산', '구름', '비', '눈', '바다'], emojis: ['🌳', '🌸', '🌊', '⛰️', '☁️', '🌧️', '❄️', '🌊'] },
+            HOBBY: { id: 'HOBBY', label: '취미', color: '#f06292', items: ['축구', '야구', '농구', '독서', '게임', '낚시', '요리', '여행'], emojis: ['⚽', '⚾', '🏀', '📚', '🎮', '🎣', '🍳', '✈️'] },
+            FOOD: { id: 'FOOD', label: '음식', color: '#a1887f', items: ['피자', '햄버거', '치킨', '국수', '밥', '빵', '케이크', '아이스크림'], emojis: ['🍕', '🍔', '🍗', '🍜', '🍚', '🍞', '🍰', '🍦'] },
+        };
+
+        const CARD_TYPES = {
+            KEY: 'KEY',
+            SUB: 'SUB'
+        };
+
+        const GAME_CONFIG = {
+            // Turns will be calculated dynamically
+        };
+
+        // --- UI CLASS ---
+        class GameUI {
+            constructor(game) {
+                this.game = game;
+                this.app = document.getElementById('app');
+                this.sortingArea = document.getElementById('sorting-area');
+                this.tableauArea = document.getElementById('tableau-area');
+                this.graveyard = document.getElementById('graveyard'); // Open Pile
+                this.deckPile = document.getElementById('deck-pile'); // Hidden Draw Pile
+                this.turnsValue = document.getElementById('turns-value');
+            }
+
+            init() {
+                this.renderLayout();
+            }
+
+            renderLayout() {
+                // Sorting Slots - FIXED at 4
+                this.sortingArea.innerHTML = '';
+                // We create 4 empty slots regardless of category count
+                for (let i = 0; i < 4; i++) {
+                    const slot = document.createElement('div');
+                    slot.className = 'slot sorting-slot';
+                    slot.dataset.index = i;
+                    this.makeDroppable(slot, 'sorting', i);
+                    this.sortingArea.appendChild(slot);
+                }
+
+                // Tableau Columns - Remains 4
+                this.tableauArea.innerHTML = '';
+                for (let i = 0; i < 4; i++) {
+                    const col = document.createElement('div');
+                    col.className = 'tableau-column';
+                    col.dataset.index = i;
+
+                    const base = document.createElement('div');
+                    base.className = 'slot-base';
+                    this.makeDroppable(base, 'tableau', i);
+
+                    col.appendChild(base);
+                    this.tableauArea.appendChild(col);
+                }
+
+                // Deck Loop Click
+                this.deckPile.onclick = () => this.game.drawCard();
+
+                // Restart Button
+                document.getElementById('restart-btn').onclick = () => this.game.restart();
+            }
+
+            update(state) {
+                this.turnsValue.textContent = state.turnsLeft;
+
+                // 1. Sorting Slots
+                state.sortingSlots.forEach((pile, i) => {
+                    const slot = this.sortingArea.children[i];
+
+                    // Update Label based on content
+                    if (pile.length > 0) {
+                        const keyCard = pile[0];
+                        // Look up current game category config
+                        const catConfig = this.game.activeCategories[keyCard.category];
+
+                        // Calculate counters
+                        const total = catConfig.itemCount; // Dynamically set item count
+                        const current = pile.length - 1; // Subtract Key Card
+
+                        // Format: Category (Newline) (Total/Collected)
+                        slot.setAttribute('data-label', `${catConfig.label}\n(${total}/${current})`);
+                    } else {
+                        slot.removeAttribute('data-label');
+                    }
+
+                    // Clean
+                    const oldCards = slot.querySelectorAll('.card');
+                    oldCards.forEach(c => c.remove());
+
+                    if (pile.length > 0) {
+                        const topCard = pile[pile.length - 1];
+                        const cardEl = this.createCardElement(topCard);
+                        cardEl.dataset.sourceType = 'sorting';
+                        cardEl.dataset.sourceIndex = i;
+                        slot.appendChild(cardEl);
+                    }
+                });
+
+                // 2. Tableau
+                const cols = document.querySelectorAll('.tableau-column');
+                cols.forEach((col, i) => {
+                    const pile = state.tableauSlots[i];
+                    const cards = col.querySelectorAll('.card');
+                    cards.forEach(c => c.remove());
+
+                    pile.forEach((card, cardIndex) => {
+                        const isLast = cardIndex === pile.length - 1;
+                        let cardEl;
+
+                        // Use persistent faceUp state OR default to isLast if undefined (safe fallback)
+                        const isFaceUp = card.faceUp === true;
+
+                        if (isFaceUp) {
+                            // Front Face
+                            cardEl = this.createCardElement(card);
+                            cardEl.draggable = true;
+
+                            // If this card is NOT the last one (i.e. covered by others), align text to top
+                            if (!isLast && card.type !== 'KEY') {
+                                cardEl.classList.add('stacked-view');
+                            }
+                        } else {
+                            // Back Face
+                            cardEl = document.createElement('div');
+                            cardEl.className = 'card back';
+
+                            // Rabbit Icon for back
+                            const rabbit = document.createElement('div');
+                            rabbit.className = 'rabbit-icon';
+                            cardEl.appendChild(rabbit);
+
+                            cardEl.draggable = false;
+                        }
+
+                        cardEl.style.top = `${cardIndex * 35}px`;
+                        cardEl.style.zIndex = cardIndex + 1;
+
+                        cardEl.dataset.sourceType = 'tableau';
+                        cardEl.dataset.sourceIndex = i;
+                        cardEl.dataset.cardIndex = cardIndex;
+
+                        if (!isLast) {
+                            cardEl.style.cursor = 'default';
+                        }
+
+                        // FIX: Make the card itself droppable so we can stack on it
+                        this.makeDroppable(cardEl, 'tableau', i);
+
+                        col.appendChild(cardEl);
+                    });
+                });
+
+                // 3. Open Pile (Graveyard/Discard)
+                const openCards = this.graveyard.querySelectorAll('.card');
+                openCards.forEach(c => c.remove());
+
+                if (state.openPile.length > 0) {
+                    const topCard = state.openPile[state.openPile.length - 1];
+                    const cardEl = this.createCardElement(topCard);
+                    cardEl.draggable = true;
+                    cardEl.dataset.sourceType = 'graveyard';
+                    this.graveyard.appendChild(cardEl);
+                }
+
+                // 4. Draw Pile (Deck) - Visual Thickness
+                this.renderDeckThickness(state.deck.length);
+            }
+
+            renderDeckThickness(count) {
+                this.deckPile.innerHTML = '';
+                if (count > 0) {
+                    const backCard = document.createElement('div');
+                    backCard.className = 'card back';
+
+                    const thickness = Math.min(Math.floor(count / 2), 10);
+                    const shadow = Array.from({ length: thickness }, (_, i) =>
+                        `${i + 1}px ${i + 1}px 0 #8d6e63`
+                    ).join(', ');
+
+                    backCard.style.boxShadow = shadow || 'none';
+
+                    const rabbit = document.createElement('div');
+                    rabbit.className = 'rabbit-icon';
+                    backCard.appendChild(rabbit);
+
+                    this.deckPile.appendChild(backCard);
+                } else {
+                    this.deckPile.innerHTML = '<div style="opacity:0.3; color:white;">EMPTY</div>';
+                }
+            }
+
+            createCardElement(card) {
+                const el = document.createElement('div');
+                const typeClass = card.type === 'KEY' ? 'key-card' : 'sub-card';
+                el.className = `card ${typeClass}`;
+                el.draggable = true;
+                el.dataset.id = card.id;
+
+                // Content
+                const label = document.createElement('span');
+                label.className = 'label';
+                label.style.fontSize = '14px'; // Smaller font for stack visibility
+                label.style.lineHeight = '1.2';
+
+                // Image Mode Support: Use Emoji if enabled for this category
+                // EXCEPTION: Key Cards always show Text
+                const catConfig = this.game.activeCategories[card.category];
+                if (catConfig && catConfig.isImageMode && card.emoji && card.type !== 'KEY') {
+                    label.textContent = card.emoji;
+                    label.style.fontSize = '2rem'; // Larger for emoji
+                } else {
+                    label.textContent = card.label;
+                }
+
+                el.appendChild(label);
+
+                // Add Counter for Key Card
+                if (card.type === 'KEY') {
+                    // Calculate count
+                    const catId = card.category;
+                    const collected = this.game.getCollectedCount(catId);
+                    const total = catConfig ? catConfig.itemCount : 8;
+
+                    const counter = document.createElement('div');
+                    counter.className = 'key-counter';
+                    counter.textContent = `${total} / ${collected}`;
+                    el.appendChild(counter);
+                }
+
+                el.addEventListener('dragstart', (e) => this.handleDragStart(e, card));
+
+                // Touch Events for Mobile
+                el.addEventListener('touchstart', (e) => this.handleTouchStart(e, card), { passive: false });
+                el.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
+                el.addEventListener('touchend', (e) => this.handleTouchEnd(e, card));
+
+                return el;
+            }
+
+            makeDroppable(el, type, index = -1) {
+                el.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    if (el.classList.contains('slot')) el.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                });
+
+                el.addEventListener('dragleave', (e) => {
+                    if (el.classList.contains('slot')) el.style.backgroundColor = '';
+                });
+
+                el.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    if (el.classList.contains('slot')) el.style.backgroundColor = '';
+                    const cardId = e.dataTransfer.getData('text/plain');
+                    this.game.handleDrop(cardId, type, index);
+                });
+            }
+
+            handleDragStart(e, card) {
+                e.dataTransfer.setData('text/plain', card.id);
+                e.dataTransfer.effectAllowed = 'move';
+            }
+
+            // --- TOUCH SUPPORT ---
+            handleTouchStart(e, card) {
+                e.preventDefault(); // Stop scrolling
+                const touch = e.touches[0];
+
+                // Create Ghost
+                this.dragGhost = document.createElement('div');
+                this.dragGhost.className = e.target.className;
+                this.dragGhost.innerHTML = e.target.innerHTML;
+                this.dragGhost.style.position = 'fixed';
+                this.dragGhost.style.width = getComputedStyle(e.target).width;
+                this.dragGhost.style.height = getComputedStyle(e.target).height;
+                this.dragGhost.style.left = `${touch.clientX - 30}px`;
+                this.dragGhost.style.top = `${touch.clientY - 40}px`;
+                this.dragGhost.style.opacity = '0.9';
+                this.dragGhost.style.zIndex = '1000';
+                this.dragGhost.style.pointerEvents = 'none'; // click-through
+                this.dragGhost.style.transform = 'scale(1.1)';
+
+                document.body.appendChild(this.dragGhost);
+
+                // Store data
+                this.touchDragCardId = card.id;
+            }
+
+            handleTouchMove(e) {
+                e.preventDefault();
+                if (!this.dragGhost) return;
+                const touch = e.touches[0];
+                this.dragGhost.style.left = `${touch.clientX - 30}px`;
+                this.dragGhost.style.top = `${touch.clientY - 40}px`;
+            }
+
+            handleTouchEnd(e, card) {
+                if (this.dragGhost) {
+                    this.dragGhost.remove();
+                    this.dragGhost = null;
+                }
+
+                if (!this.touchDragCardId) return;
+
+                const touch = e.changedTouches[0];
+                // Find drop target (we need to hide the ghost first? we did remove it above)
+                // We need to find the element *under* the finger
+
+                // Hide any potential overlay temporarily if needed (ghost is already removed)
+                const droppedEl = document.elementFromPoint(touch.clientX, touch.clientY);
+
+                if (droppedEl) {
+                    // Traverse up to find a droppable zone or styled card
+                    // We need to identify if it's a Slot, Base, or Card in Tableau/Sorting
+
+                    let target = droppedEl.closest('.slot, .slot-base, .tableau-column .card');
+
+                    if (target) {
+                        // Extract type and index from the closest significant element
+                        // But wait, our 'makeDroppable' attached listeners to specific elements.
+                        // We need to map the element back to 'type' and 'index'.
+
+                        // If dropped on a card in tableau
+                        if (target.classList.contains('card') && target.dataset.sourceType === 'tableau') {
+                            const type = 'tableau';
+                            const index = parseInt(target.dataset.sourceIndex);
+                            this.game.handleDrop(this.touchDragCardId, type, index);
+                        }
+                        // If dropped on slot-base
+                        else if (target.classList.contains('slot-base')) {
+                            // Find parent column index?
+                            // Actually makeDroppable passed index. We can store it in dataset for fallback.
+                            // Our makeDroppable doesn't set dataset on base, but parent col has index.
+                            const col = target.closest('.tableau-column');
+                            if (col) {
+                                this.game.handleDrop(this.touchDragCardId, 'tableau', parseInt(col.dataset.index));
+                            }
+                        }
+                        // If dropped on sorting slot
+                        else if (target.classList.contains('sorting-slot')) {
+                            this.game.handleDrop(this.touchDragCardId, 'sorting', parseInt(target.dataset.index));
+                        }
+                    }
+                }
+
+                this.touchDragCardId = null;
+            }
+        }
+
+        // --- GAME CLASS ---
+        class Game {
+            constructor() {
+                // We don't init deck here, we do it in start() with randomization
+                this.state = {
+                    deck: [],
+                    openPile: [],
+                    sortingSlots: [[], [], [], []],
+                    tableauSlots: [[], [], [], []],
+                    turnsLeft: 0
+                };
+                this.activeCategories = {}; // Stores the config for the current game
+                this.ui = new GameUI(this);
+            }
+
+            start() {
+                this.setupGame();
+                this.ui.init();
+                this.ui.update(this.state);
+            }
+
+            setupGame() {
+                // 1. Randomize Category Count (4 to 8)
+                const poolKeys = Object.keys(CATEGORIES_POOL);
+                const numCats = 4 + Math.floor(Math.random() * 5); // 4, 5, 6, 7, 8
+
+                // Shuffle pool keys
+                for (let i = poolKeys.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [poolKeys[i], poolKeys[j]] = [poolKeys[j], poolKeys[i]];
+                }
+                const selectedKeys = poolKeys.slice(0, numCats);
+
+                // 2. Setup Active Categories
+                this.activeCategories = {};
+                let totalCards = 0;
+
+                selectedKeys.forEach(key => {
+                    const template = CATEGORIES_POOL[key];
+
+                    // Random Item Count (3 to 8)
+                    let itemCount = 3 + Math.floor(Math.random() * 6); // 3, 4, 5, 6, 7, 8
+                    // Ensure we don't exceed available items
+                    itemCount = Math.min(itemCount, template.items.length);
+
+                    // Image Mode Change (20%)
+                    const isImageMode = Math.random() < 0.2;
+
+                    this.activeCategories[key] = {
+                        ...template,
+                        itemCount: itemCount,
+                        isImageMode: isImageMode,
+                        activeItems: template.items.slice(0, itemCount),
+                        activeEmojis: template.emojis ? template.emojis.slice(0, itemCount) : []
+                    };
+                    totalCards += (1 + itemCount); // 1 Key + Items
+                });
+
+                // 3. Calculate Turns
+                // Heuristic: TotalCards * 2.5
+                this.state.turnsLeft = Math.ceil(totalCards * 2.5);
+
+                // 4. Initialize Deck
+                this.initializeDeck();
+
+                // 5. Deal
+                this.dealInitialCards();
+            }
+
+            initializeDeck() {
+                let cards = [];
+                Object.values(this.activeCategories).forEach(cat => {
+                    // Key Card
+                    cards.push({
+                        id: `KEY_${cat.id}`,
+                        type: CARD_TYPES.KEY,
+                        category: cat.id,
+                        label: cat.label,
+                        emoji: '🔑' // Key emoji? Or just label
+                    });
+
+                    // Sub Cards
+                    cat.activeItems.forEach((item, idx) => {
+                        cards.push({
+                            id: `SUB_${cat.id}_${idx}`,
+                            type: CARD_TYPES.SUB,
+                            category: cat.id,
+                            label: item,
+                            emoji: cat.activeEmojis[idx] || item // Fallback
+                        });
+                    });
+                });
+                this.shuffle(cards);
+                this.state.deck = cards;
+            }
+
+            shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+
+            dealInitialCards() {
+                this.state.tableauSlots = [[], [], [], []]; // Ensure clear
+
+                const totalCards = this.state.deck.length;
+                const dealCount = Math.floor(totalCards * 0.4); // 40%
+
+                // Distribute cards round-robin
+                for (let k = 0; k < dealCount; k++) {
+                    if (this.state.deck.length > 0) {
+                        const card = this.state.deck.pop();
+                        const colIndex = k % 4;
+                        this.state.tableauSlots[colIndex].push(card);
+                    }
+                }
+
+                // Set Face Up for the last card in each column
+                this.state.tableauSlots.forEach(pile => {
+                    if (pile.length > 0) {
+                        // Reset all to face down first (default is undefined/false)
+                        pile.forEach(c => c.faceUp = false);
+                        // Set top to face up
+                        pile[pile.length - 1].faceUp = true;
+                    }
+                });
+            }
+
+            restart() {
+                if (confirm("게임을 재시작하시겠습니까?")) {
+                    this.state = {
+                        deck: [],
+                        openPile: [],
+                        sortingSlots: [[], [], [], []],
+                        tableauSlots: [[], [], [], []],
+                        turnsLeft: GAME_CONFIG.INITIAL_TURNS
+                    };
+                    this.start();
+                }
+            }
+
+            drawCard() {
+                if (this.state.turnsLeft <= 0) {
+                    alert('남은 턴이 없습니다.');
+                    return;
+                }
+
+                if (this.state.deck.length === 0) {
+                    if (this.state.openPile.length > 0) {
+                        // Recycle: Move openPile back to deck (reversed)
+                        this.state.deck = [...this.state.openPile].reverse();
+                        this.state.openPile = [];
+                        // Don't consume turn on recycle? Or do? 
+                        // Standard Solitaire: Recycling prevents stalemate. Usually free or limited.
+                        // User didn't specify cost, let's make it free action but consume turn on Draw.
+                        this.ui.update(this.state);
+                        return;
+                    } else {
+                        return; // Both empty
+                    }
+                }
+
+                const card = this.state.deck.pop();
+                this.state.openPile.push(card);
+                this.state.turnsLeft--;
+
+                this.ui.update(this.state);
+            }
+
+            findCardLocation(cardId) {
+                const openIdx = this.state.openPile.findIndex(c => c.id === cardId);
+                if (openIdx !== -1) return { location: 'graveyard', index: -1, cardIndex: openIdx };
+
+                for (let i = 0; i < 4; i++) {
+                    const idx = this.state.tableauSlots[i].findIndex(c => c.id === cardId);
+                    if (idx !== -1) return { location: 'tableau', index: i, cardIndex: idx };
+                }
+
+                for (let i = 0; i < 4; i++) {
+                    const idx = this.state.sortingSlots[i].findIndex(c => c.id === cardId);
+                    if (idx !== -1) return { location: 'sorting', index: i, cardIndex: idx };
+                }
+                return null;
+            }
+
+            validateDrop(card, targetType, targetIndex) {
+                if (targetType === 'sorting') {
+                    const pile = this.state.sortingSlots[targetIndex];
+                    const topCard = pile.length > 0 ? pile[pile.length - 1] : null;
+
+                    if (!topCard) {
+                        return card.type === CARD_TYPES.KEY;
+                    } else {
+                        return card.type === CARD_TYPES.SUB && card.category === topCard.category;
+                    }
+                }
+
+                if (targetType === 'tableau') {
+                    const pile = this.state.tableauSlots[targetIndex];
+                    if (pile.length === 0) return true;
+
+                    const topCard = pile[pile.length - 1];
+
+                    // Rule: Cannot place anything on a KEY card in Tableau
+                    if (topCard.type === CARD_TYPES.KEY) {
+                        return false;
+                    }
+
+                    // Otherwise, must match category
+                    return card.category === topCard.category;
+                }
+                return false;
+            }
+
+            handleDrop(cardId, targetType, targetIndex) {
+                const source = this.findCardLocation(cardId);
+                if (!source) return;
+
+                let pile = null;
+                if (source.location === 'graveyard') pile = this.state.openPile;
+                else if (source.location === 'tableau') pile = this.state.tableauSlots[source.index];
+                else if (source.location === 'sorting') pile = this.state.sortingSlots[source.index];
+
+                const card = pile[source.cardIndex];
+
+                // Restriction: For Graveyard, only top card can be moved.
+                // For Tableau, we allow group dragging (middle cards), so we don't return here.
+                if (source.location === 'graveyard' && source.cardIndex !== pile.length - 1) return;
+
+                if (this.validateDrop(card, targetType, targetIndex)) {
+                    // Group Move: Take all cards from the grabbed index to the end
+                    const cardsToMove = pile.splice(source.cardIndex);
+
+                    // Update Source: If we moved from Tableau, reveal the new top card
+                    if (source.location === 'tableau' && pile.length > 0) {
+                        pile[pile.length - 1].faceUp = true;
+                    }
+
+                    // Essential: Ensure all moved cards are Face Up
+                    cardsToMove.forEach(c => c.faceUp = true);
+
+                    // Add to Target
+                    if (targetType === 'sorting') {
+                        this.state.sortingSlots[targetIndex].push(...cardsToMove);
+
+                        // Check for Category Completion (Slot Recycling)
+                        const currentPile = this.state.sortingSlots[targetIndex];
+                        if (currentPile.length > 0) {
+                            const keyCard = currentPile[0];
+                            const config = this.activeCategories[keyCard.category];
+
+                            // Key + All Items
+                            if (currentPile.length === (config.itemCount + 1)) {
+                                // Delay slightly for visual effect then clear? Or just clear.
+                                // For now, immediate clear with a small alert or just log.
+                                // Reactivity: The update() will show empty slot.
+
+                                // We can use setTimeout to let the user see the card land, 
+                                // but state update is synchronous. 
+                                // Let's just alert for now or trust the user sees the counter finish.
+
+                                // Actually, clearing it immediately might feel abrupt. 
+                                // But per rules: "Empty slot immediately".
+                                this.state.sortingSlots[targetIndex] = [];
+                                // Optional: You could add a 'completedCategories' count to state if shown in UI.
+                            }
+                        }
+
+                        this.checkWinCondition();
+                    } else if (targetType === 'tableau') {
+                        this.state.tableauSlots[targetIndex].push(...cardsToMove);
+                    }
+
+                    this.ui.update(this.state);
+                }
+            }
+
+            checkWinCondition() {
+                // 1. Deck Empty?
+                if (this.state.deck.length > 0) return;
+                // 2. Open Pile Empty?
+                if (this.state.openPile.length > 0) return;
+                // 3. Tableau Empty?
+                const tableauHasCards = this.state.tableauSlots.some(pile => pile.length > 0);
+                if (tableauHasCards) return;
+                // 4. Sorting Slots Empty? (Because completed ones are cleared!)
+                const sortingHasCards = this.state.sortingSlots.some(pile => pile.length > 0);
+                if (sortingHasCards) return;
+
+                // Win!
+                setTimeout(() => alert("축하합니다! 모든 카드를 완벽하게 정리했습니다!"), 100);
+            }
+
+            getCollectedCount(catId) {
+                const slotIndex = this.state.sortingSlots.findIndex(pile => {
+                    if (pile.length > 0) return pile[0].category === catId;
+                    return false;
+                });
+
+                if (slotIndex === -1) return 0;
+                // Subtract 1 because first card is KEY
+                return Math.max(0, this.state.sortingSlots[slotIndex].length - 1);
+            }
+
+            checkWinCondition() {
+                const totalCards = this.state.deck.length + this.state.openPile.length +
+                    this.state.tableauSlots.flat().length;
+                if (totalCards === 0) {
+                    setTimeout(() => alert("축하합니다! 모든 카드를 정리했습니다!"), 100);
+                }
+            }
+        }
+
+        const game = new Game();
+        game.start();
+        window.game = game; 
+    </script>
+</body>
+
+</html>
