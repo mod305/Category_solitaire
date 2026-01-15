@@ -1027,7 +1027,7 @@
                         turnMultiplier = 1.0;
                         break;
                     case 'EXTREME':
-                        catMultiplier = 1.5; // 4 * 1.5 = 6
+                        catMultiplier = 2.0; // 4 * 2.0 = 8
                         turnMultiplier = 1.0;
                         break;
                     default:
@@ -1364,6 +1364,11 @@
                 this.state.turnsLeft--;
 
                 this.ui.update(this.state);
+
+                // Check for Game Over (failure) if turns ran out
+                if (this.state.turnsLeft === 0) {
+                    setTimeout(() => alert("턴이 모두 소진되었습니다. (실패)"), 100);
+                }
             }
 
             findCardLocation(cardId) {
