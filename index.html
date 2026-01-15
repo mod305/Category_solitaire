@@ -1157,6 +1157,175 @@
                 });
             }
 
+            // --- SIMULATION FOR DIFFICULTY CALCULATION ---
+            calculateMinimumTurns() {
+                // 1. Deep Clone State for Simulation
+                // We need to simulate: Deck, Tableau, Sorting, OpenPile, Collected Keys
+                let simDeck = JSON.parse(JSON.stringify(this.state.deck)); // Current Deck (after deal)
+                let simTableau = JSON.parse(JSON.stringify(this.state.tableauSlots));
+                let simSorting = [[], [], [], []]; // 4 Empty Sorting Slots
+                let simOpenPile = [];
+                let collectedKeys = new Set(); // Track enabled categories
+
+                let turns = 0;
+                let moves = 0;
+                let maxcycles = 10; // Safety break
+                let cycle = 0;
+
+                // Helper: Check if card can go to Sorting
+                const canSort = (card) => {
+                    if (card.type === 'KEY') return true;
+                    // Sub only if Key is active (in simulation, 'active' means Key is in simSorting or we track it)
+                    // The game rule: Sorting Slot top card must be same category.
+                    // Wait, game rule says: If slot empty, ONLY Key.
+                    // If slot has card, ONLY Sub of same category.
+                    // We need to track actual slots.
+
+                    // Specific Logic:
+                    // Find a slot that accepts this card.
+                    // Case A: Key Card. Needs an empty slot.
+                    if (card.type === 'KEY') {
+                        return simSorting.some(slot => slot.length === 0);
+                    }
+                    // Case B: Sub Card. Needs a slot with matching Category.
+                    if (card.type === 'SUB') {
+                        return simSorting.some(slot => slot.length > 0 && slot[0].category === card.category);
+                    }
+                    return false;
+                };
+
+                const doSort = (card) => {
+                    if (card.type === 'KEY') {
+                        const emptyIdx = simSorting.findIndex(s => s.length === 0);
+                        if (emptyIdx !== -1) simSorting[emptyIdx].push(card);
+                    } else {
+                        const matchIdx = simSorting.findIndex(s => s.length > 0 && s[0].category === card.category);
+                        if (matchIdx !== -1) simSorting[matchIdx].push(card);
+                    }
+                    // Check Completion (Optional for sim, just keep sorting)
+                    // In real game, completed slots empty. In sim, we can just keep stacking or clear.
+                    // Clearing helps finding empty slots for NEW Keys.
+                    // Check if pile is full (Key + Items).
+                    simSorting.forEach((pile, idx) => {
+                        if (pile.length > 0) {
+                            const k = pile[0];
+                            const config = this.activeCategories[k.category];
+                            if (pile.length === (config.itemCount + 1)) {
+                                simSorting[idx] = []; // Clear logic
+                            }
+                        }
+                    });
+                };
+
+                // Simulation Loop
+                while (cycle < maxcycles) {
+                    let progressMade = false;
+
+                    // Phase 1: Tableau Auto-Play (Free Actions)
+                    // Continually check if any top card of Tableau can go to Sorting
+                    let tableuChanged = true;
+                    while (tableuChanged) {
+                        tableuChanged = false;
+                        for (let i = 0; i < 4; i++) {
+                            const col = simTableau[i];
+                            if (col.length > 0) {
+                                const top = col[col.length - 1];
+                                if (canSort(top)) {
+                                    doSort(col.pop());
+                                    tableuChanged = true;
+                                    progressMade = true;
+                                    // If col not empty, new top is revealed (simulated face up)
+                                }
+                            }
+                        }
+                    }
+
+                    // Check Win
+                    const allTableauEmpty = simTableau.every(c => c.length === 0);
+                    const deckEmpty = simDeck.length === 0 && simOpenPile.length === 0;
+                    // Note: Sorting slots empty is win condition IF others empty.
+                    // Simplified: If deck and tableau empty, we win.
+                    if (allTableauEmpty && deckEmpty) {
+                        break;
+                    }
+
+                    // Phase 2: Draw
+                    if (simDeck.length === 0) {
+                        if (simOpenPile.length > 0) {
+                            // Recycle
+                            simDeck = simOpenPile.reverse();
+                            simOpenPile = [];
+                            cycle++;
+                            if (cycle >= maxcycles) break;
+                        } else {
+                            break; // Deadlock or Win
+                        }
+                    }
+
+                    if (simDeck.length > 0) {
+                        const card = simDeck.pop();
+                        turns++;
+
+                        // Logic:
+                        // 1. Can Sort directly?
+                        if (canSort(card)) {
+                            doSort(card);
+                            progressMade = true;
+                        }
+                        // 2. Can Slot in Tableau? (Optimize: Only if needed?)
+                        // Perfect Play Strategy: Always keep Tableau slots full to dig deep?
+                        // Or only hold if Key not ready?
+                        // Simple Heuristic: If we can't sort, put in Tableau if possible.
+                        // If Tableau full, put in OpenPile.
+                        else {
+                            // Try Tableau
+                            // Priority: Empty Columns? or just any?
+                            // Solitaire logic: Avoid blocking deep columns. But here columns are stacks.
+                            // Just finding first available spot.
+                            // BUT: Game rule usually restricts placing on Tableau?
+                            // Valid Drop: "Cannot place on KEY", "Must match category".
+                            // Wait, Real Game Rule: 'validateDrop' -> 'Target must match category'.
+                            // This means we CANNOT just place any card in Tableau.
+                            // We can only stack cards of SAME CATEGORY.
+                            // And Empty Column accepts ANY card.
+
+                            // Let's check Tableau placement rules for Simulation.
+                            let placed = false;
+
+                            // A. Try to stack on existing matching category
+                            for (let i = 0; i < 4; i++) {
+                                const col = simTableau[i];
+                                if (col.length > 0) {
+                                    const top = col[col.length - 1];
+                                    if (top.type !== 'KEY' && top.category === card.category) {
+                                        col.push(card);
+                                        placed = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            // B. If not placed, Try Empty Column
+                            if (!placed) {
+                                const emptyColIdx = simTableau.findIndex(c => c.length === 0);
+                                if (emptyColIdx !== -1) {
+                                    simTableau[emptyColIdx].push(card);
+                                    placed = true;
+                                }
+                            }
+
+                            // C. Failed to Place -> Open Pile (Waste)
+                            if (!placed) {
+                                simOpenPile.push(card);
+                            }
+                        }
+                    }
+                }
+
+                console.log(`[Simulation] Cycles: ${cycle}, Est Turns: ${turns}`);
+                return turns > 0 ? turns : 50; // Safety fallback
+            }
+
             restart() {
                 if (confirm("게임을 재시작하시겠습니까? (난이도가 무작위로 변경됩니다)")) {
                     this.state = {
