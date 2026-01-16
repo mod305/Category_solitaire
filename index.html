@@ -3,7 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>카테고리 솔리테어</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -540,7 +541,145 @@
                 top: -15px;
             }
         }
+
+        /* 3. MOBILE PORTRAIT (Vertical Layout) - The Requested Redesign */
+        @media (max-width: 768px) {
+            :root {
+                /* Dynamic Card Size: (100vw - padding) / 4 columns */
+                /* Assuming ~20px app padding + gaps */
+                --card-width: calc((100vw - 32px) / 4 - 6px);
+                --card-height: calc(((100vw - 32px) / 4 - 6px) * 1.4);
+                --gap: 6px;
+                --app-padding: 12px;
+            }
+
+            body {
+                align-items: flex-start;
+                /* Align top */
+                padding: 0;
+            }
+
+            #app {
+                display: grid;
+                grid-template-areas:
+                    "header controls"
+                    "sorting sorting"
+                    "tableau tableau";
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto auto 1fr;
+                gap: 16px;
+                padding: var(--app-padding);
+                height: 100vh;
+                height: 100dvh;
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+
+            /* Area 1: Header (Left) */
+            .left-panel {
+                grid-area: header;
+                display: flex;
+                flex-direction: column;
+                /* Stack Difficulty & Controls */
+                width: 100%;
+                align-items: flex-start;
+                padding: 0;
+            }
+
+            /* Difficulty Buttons: Compact Grid */
+            .difficulty-selector {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 4px;
+                width: 100%;
+                margin-bottom: 8px;
+            }
+
+            .diff-btn {
+                font-size: 0.6rem;
+                padding: 4px;
+                height: 24px;
+            }
+
+            /* Turn & Restart */
+            .left-panel>div {
+                width: 100%;
+            }
+
+            .turn-counter {
+                width: 50px;
+                height: 50px;
+            }
+
+            .turn-counter .value {
+                font-size: 1.2rem;
+            }
+
+            .restart-btn {
+                height: 36px;
+                font-size: 0.8rem;
+                flex: 1;
+            }
+
+            /* Area 2: Controls (Right) */
+            .right-panel {
+                grid-area: controls;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+                /* Align bottom of cell */
+                align-items: flex-end;
+                padding: 0;
+                width: 100%;
+            }
+
+            .deck-area {
+                display: flex;
+                flex-direction: row;
+                /* Side by Side */
+                gap: 10px;
+                align-items: center;
+            }
+
+            /* Area 3: Sorting Slots (Row 2) */
+            .center-board {
+                display: contents;
+                /* Unwrap to grid */
+            }
+
+            .sorting-area {
+                grid-area: sorting;
+                display: flex;
+                justify-content: space-between;
+                width: 100%;
+                padding-bottom: 10px;
+                border-bottom: 1px solid var(--glass-border);
+                margin-bottom: 10px;
+            }
+
+            /* Area 4: Tableau (Row 3) */
+            .tableau-area {
+                grid-area: tableau;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: var(--gap);
+                width: 100%;
+                justify-items: center;
+                /* Ensure columns have min height for drop targets */
+            }
+
+            .tableau-column {
+                /* Ensure column catches drops */
+                min-height: 200px;
+            }
+
+            /* Text Scaling */
+            .label {
+                font-size: 0.7rem;
+            }
+        }
     </style>
+
 </head>
 
 <body>
@@ -549,36 +688,29 @@
         <div class="left-panel">
             <div style="display: flex; flex-direction: column; gap: 5px;">
                 <!-- Difficulty Selector -->
-                <div class="difficulty-selector" id="diff-selector">
-                    <button class="diff-btn diff-easy" data-diff="EASY">쉬움</button>
-                    <button class="diff-btn diff-normal active" data-diff="NORMAL">보통</button>
-                    <button class="diff-btn diff-hard" data-diff="HARD">어려움</button>
-                    <button class="diff-btn diff-extreme" data-diff="EXTREME">극악</button>
-                </div>
-
-                <div style="display: flex; flex-direction: row; gap: 10px; align-items: center;">
-                    <button id="restart-btn" class="restart-btn">재시작</button>
-                    <div class="turn-counter">
-                        <span class="label">남은 턴</span>
-                        <span id="turns-value" class="value">0</span>
-                    </div>
+                <div class="difficulty-selector" id="diff-selector"><button class="diff-btn diff-easy"
+                        data-diff="EASY">쉬움</button><button class="diff-btn diff-normal active"
+                        data-diff="NORMAL">보통</button><button class="diff-btn diff-hard"
+                        data-diff="HARD">어려움</button><button class="diff-btn diff-extreme"
+                        data-diff="EXTREME">극악</button></div>
+                <div style="display: flex; flex-direction: row; gap: 10px; align-items: center;"><button
+                        id="restart-btn" class="restart-btn">재시작</button>
+                    <div class="turn-counter"><span class="label">남은 턴</span><span id="turns-value"
+                            class="value">0</span></div>
                 </div>
             </div>
         </div>
-
         <!-- 2. CENTER BOARD: Sorting & Tableau -->
         <div class="center-board">
             <!-- Row 1: Sorting Slots -->
             <div id="sorting-area" class="sorting-area">
                 <!-- Sorting Slots generated by JS -->
             </div>
-
             <!-- Row 2: Tableau Columns -->
             <div id="tableau-area" class="tableau-area">
                 <!-- Deployment Slots -->
             </div>
         </div>
-
         <!-- 3. RIGHT PANEL: Deck & Graveyard -->
         <div class="right-panel">
             <div class="deck-area">
@@ -586,7 +718,6 @@
                 <div id="graveyard" class="slot" style="border-style: solid; border-color: rgba(255,255,255,0.1);">
                     <!-- Face Up Cards go here -->
                 </div>
-
                 <!-- Draw Pile (Hidden) -->
                 <div id="deck-pile" class="slot" style="border: none;">
                     <!-- Face Down Cards go here -->
@@ -594,20 +725,22 @@
             </div>
         </div>
     </div>
-
     <script src="js/categories.js"></script>
-    <script>
-        // --- CONSTANTS ---
+    <script> // --- CONSTANTS ---
         // CATEGORIES_POOL is now loaded from js/categories.js
 
         const CARD_TYPES = {
             KEY: 'KEY',
             SUB: 'SUB'
-        };
+        }
+
+            ;
 
         const GAME_CONFIG = {
             // Turns will be calculated dynamically
-        };
+        }
+
+            ;
 
         // --- UI CLASS ---
         class GameUI {
@@ -628,6 +761,7 @@
 
             setupDifficultyUI() {
                 const buttons = document.querySelectorAll('.diff-btn');
+
                 buttons.forEach(btn => {
                     btn.onclick = () => {
                         // Update UI
@@ -635,13 +769,16 @@
                         btn.classList.add('active');
                         // Update Game Config and Restart
                         this.game.setDifficulty(btn.dataset.diff);
-                    };
+                    }
+
+                        ;
                 });
             }
 
             renderLayout() {
                 // Sorting Slots - FIXED at 4
                 this.sortingArea.innerHTML = '';
+
                 // We create 4 empty slots regardless of category count
                 for (let i = 0; i < 4; i++) {
                     const slot = document.createElement('div');
@@ -653,6 +790,7 @@
 
                 // Tableau Columns - Remains 4
                 this.tableauArea.innerHTML = '';
+
                 for (let i = 0; i < 4; i++) {
                     const col = document.createElement('div');
                     col.className = 'tableau-column';
@@ -678,10 +816,13 @@
 
                 // Sync Difficulty UI
                 const diffButtons = document.querySelectorAll('.diff-btn');
+
                 diffButtons.forEach(btn => {
                     if (btn.dataset.diff === this.game.difficulty) {
                         btn.classList.add('active');
-                    } else {
+                    }
+
+                    else {
                         btn.classList.remove('active');
                     }
                 });
@@ -701,8 +842,11 @@
                         const current = pile.length - 1; // Subtract Key Card
 
                         // Format: Category (Newline) (Total/Collected)
+                        // Format: Category (Newline) (Total/Collected)
                         slot.setAttribute('data-label', `${catConfig.label}\n(${total}/${current})`);
-                    } else {
+                    }
+
+                    else {
                         slot.removeAttribute('data-label');
                     }
 
@@ -721,6 +865,7 @@
 
                 // 2. Tableau
                 const cols = document.querySelectorAll('.tableau-column');
+
                 cols.forEach((col, i) => {
                     const pile = state.tableauSlots[i];
                     const cards = col.querySelectorAll('.card');
@@ -742,7 +887,9 @@
                             if (!isLast && card.type !== 'KEY') {
                                 cardEl.classList.add('stacked-view');
                             }
-                        } else {
+                        }
+
+                        else {
                             // Back Face
                             cardEl = document.createElement('div');
                             cardEl.className = 'card back';
@@ -791,14 +938,14 @@
 
             renderDeckThickness(count) {
                 this.deckPile.innerHTML = '';
+
                 if (count > 0) {
                     const backCard = document.createElement('div');
                     backCard.className = 'card back';
 
                     const thickness = Math.min(Math.floor(count / 2), 10);
-                    const shadow = Array.from({ length: thickness }, (_, i) =>
-                        `${i + 1}px ${i + 1}px 0 #8d6e63`
-                    ).join(', ');
+
+                    const shadow = Array.from({ length: thickness }, (_, i) => `${i + 1}px ${i + 1}px 0 #8d6e63`).join(', ');
 
                     backCard.style.boxShadow = shadow || 'none';
 
@@ -807,7 +954,9 @@
                     backCard.appendChild(rabbit);
 
                     this.deckPile.appendChild(backCard);
-                } else {
+                }
+
+                else {
                     this.deckPile.innerHTML = '<div style="opacity:0.3; color:white;">EMPTY</div>';
                 }
             }
@@ -815,6 +964,7 @@
             createCardElement(card) {
                 const el = document.createElement('div');
                 const typeClass = card.type === 'KEY' ? 'key-card' : 'sub-card';
+
                 el.className = `card ${typeClass}`;
                 el.draggable = true;
                 el.dataset.id = card.id;
@@ -828,10 +978,13 @@
                 // Image Mode Support: Use Emoji if enabled for this category
                 // EXCEPTION: Key Cards always show Text
                 const catConfig = this.game.activeCategories[card.category];
+
                 if (catConfig && catConfig.isImageMode && card.emoji && card.type !== 'KEY') {
                     label.textContent = card.emoji;
                     label.style.fontSize = '2rem'; // Larger for emoji
-                } else {
+                }
+
+                else {
                     label.textContent = card.label;
                 }
 
@@ -846,6 +999,7 @@
 
                     const counter = document.createElement('div');
                     counter.className = 'key-counter';
+
                     counter.textContent = `${total} / ${collected}`;
                     el.appendChild(counter);
                 }
@@ -853,9 +1007,23 @@
                 el.addEventListener('dragstart', (e) => this.handleDragStart(e, card));
 
                 // Touch Events for Mobile
-                el.addEventListener('touchstart', (e) => this.handleTouchStart(e, card), { passive: false });
-                el.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
+                el.addEventListener('touchstart', (e) => this.handleTouchStart(e, card), {
+                    passive: false
+                });
+
+                el.addEventListener('touchmove', (e) => this.handleTouchMove(e), {
+                    passive: false
+                });
                 el.addEventListener('touchend', (e) => this.handleTouchEnd(e, card));
+
+                // Double Click to Auto-Move Key Card
+                el.addEventListener('dblclick', (e) => {
+                    e.preventDefault();
+
+                    if (card.type === 'KEY') {
+                        this.game.tryAutoMoveKeyCard(card.id);
+                    }
+                });
 
                 return el;
             }
@@ -895,8 +1063,18 @@
                 this.dragGhost.style.position = 'fixed';
                 this.dragGhost.style.width = getComputedStyle(e.target).width;
                 this.dragGhost.style.height = getComputedStyle(e.target).height;
-                this.dragGhost.style.left = `${touch.clientX - 30}px`;
-                this.dragGhost.style.top = `${touch.clientY - 40}px`;
+
+                this.dragGhost.style.left = `$ {
+                touch.clientX - 30
+            }
+
+            px`;
+
+                this.dragGhost.style.top = `$ {
+                touch.clientY - 40
+            }
+
+            px`;
                 this.dragGhost.style.opacity = '0.9';
                 this.dragGhost.style.zIndex = '1000';
                 this.dragGhost.style.pointerEvents = 'none'; // click-through
@@ -912,8 +1090,18 @@
                 e.preventDefault();
                 if (!this.dragGhost) return;
                 const touch = e.touches[0];
-                this.dragGhost.style.left = `${touch.clientX - 30}px`;
-                this.dragGhost.style.top = `${touch.clientY - 40}px`;
+
+                this.dragGhost.style.left = `$ {
+                touch.clientX - 30
+            }
+
+            px`;
+
+                this.dragGhost.style.top = `$ {
+                touch.clientY - 40
+            }
+
+            px`;
             }
 
             handleTouchEnd(e, card) {
@@ -948,16 +1136,19 @@
                             const index = parseInt(target.dataset.sourceIndex);
                             this.game.handleDrop(this.touchDragCardId, type, index);
                         }
+
                         // If dropped on slot-base
                         else if (target.classList.contains('slot-base')) {
                             // Find parent column index?
                             // Actually makeDroppable passed index. We can store it in dataset for fallback.
                             // Our makeDroppable doesn't set dataset on base, but parent col has index.
                             const col = target.closest('.tableau-column');
+
                             if (col) {
                                 this.game.handleDrop(this.touchDragCardId, 'tableau', parseInt(col.dataset.index));
                             }
                         }
+
                         // If dropped on sorting slot
                         else if (target.classList.contains('sorting-slot')) {
                             this.game.handleDrop(this.touchDragCardId, 'sorting', parseInt(target.dataset.index));
@@ -972,6 +1163,7 @@
         // --- GAME CLASS ---
         class Game {
             constructor() {
+
                 // We don't init deck here, we do it in start() with randomization
                 this.state = {
                     deck: [],
@@ -979,8 +1171,13 @@
                     sortingSlots: [[], [], [], []],
                     tableauSlots: [[], [], [], []],
                     turnsLeft: 0
-                };
-                this.activeCategories = {}; // Stores the config for the current game
+                }
+
+                    ;
+
+                this.activeCategories = {}
+
+                    ; // Stores the config for the current game
                 this.ui = new GameUI(this);
                 this.difficulty = 'NORMAL';
             }
@@ -999,7 +1196,10 @@
 
             setupGame(randomizeDifficulty = false) {
                 // Initialize difficulty logic
-                const difficulties = ['EASY', 'NORMAL', 'HARD', 'EXTREME'];
+                const difficulties = ['EASY',
+                    'NORMAL',
+                    'HARD',
+                    'EXTREME'];
 
                 // If randomize requested OR difficulty is logicially missing/invalid, pick random
                 if (randomizeDifficulty || !this.difficulty) {
@@ -1039,7 +1239,19 @@
                         turnMultiplier = 1.1;
                 }
 
-                console.log(`[Game] Setup ${this.difficulty}: Cats=${numCats}, TurnMult=${turnMultiplier}`);
+                console.log(`[Game] Setup $ {
+                        this.difficulty
+                    }
+
+                    : Cats=$ {
+                        numCats
+                    }
+
+                    , TurnMult=$ {
+                        turnMultiplier
+                    }
+
+                    `);
 
                 // 1. Randomize Category Selection
                 const poolKeys = Object.keys(CATEGORIES_POOL);
@@ -1047,14 +1259,18 @@
                 // Shuffle pool keys
                 for (let i = poolKeys.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    [poolKeys[i], poolKeys[j]] = [poolKeys[j], poolKeys[i]];
+                    [poolKeys[i],
+                    poolKeys[j]] = [poolKeys[j],
+                    poolKeys[i]];
                 }
 
                 const safeNumCats = Math.min(numCats, poolKeys.length);
                 const selectedKeys = poolKeys.slice(0, safeNumCats);
 
                 // 2. Setup Active Categories
-                this.activeCategories = {};
+                this.activeCategories = {}
+
+                    ;
                 let totalCards = 0;
 
                 selectedKeys.forEach(key => {
@@ -1073,7 +1289,9 @@
                         isImageMode: isImageMode,
                         activeItems: template.items.slice(0, itemCount),
                         activeEmojis: template.emojis ? template.emojis.slice(0, itemCount) : []
-                    };
+                    }
+
+                        ;
                     totalCards += (1 + itemCount); // 1 Key + Items
                 });
 
@@ -1086,16 +1304,24 @@
 
                 // 5. Calculate Turns using Heuristic (Cycle Prediction)
                 const heuristicTurns = this.calculateHeuristicTurns();
-                console.log(`[Heuristic] Calculated Turns: ${heuristicTurns}`);
+
+                console.log(`[Heuristic] Calculated Turns: $ {
+                        heuristicTurns
+                    }
+
+                    `);
 
                 // Difficulty Multiplier Application (User Request: Min * Multiplier)
                 this.state.turnsLeft = Math.ceil(heuristicTurns * turnMultiplier);
             }
 
             calculateHeuristicTurns() {
+
                 // 1. Map Key Locations
                 // Map<CategoryId, { location: 'tableau'|'deck', index: number, depth?: number }>
-                const keyMap = {};
+                const keyMap = {}
+
+                    ;
 
                 // Check Tableau
                 this.state.tableauSlots.forEach((pile, colIdx) => {
@@ -1106,7 +1332,12 @@
                             // Actually, simply: If it's in Tableau, it's roughly "Cycle 1" accessible 
                             // but adds a penalty for digging.
                             const digCost = (pile.length - 1) - depth;
-                            keyMap[card.category] = { location: 'tableau', digCost: digCost };
+
+                            keyMap[card.category] = {
+                                location: 'tableau', digCost: digCost
+                            }
+
+                                ;
                         }
                     });
                 });
@@ -1116,11 +1347,17 @@
                 // Draw Order: index K (length-1) is drawn 1st. Index 0 is drawn Last.
                 // Let's analyze "Draw Index" where 0 = First Drawn.
                 const deckSize = this.state.deck.length; // Remaining after deal
+
                 this.state.deck.forEach((card, arrayIdx) => {
                     // arrayIdx 0 = Bottom. Draw Index = length - 1 - arrayIdx
                     const drawIndex = deckSize - 1 - arrayIdx;
+
                     if (card.type === 'KEY') {
-                        keyMap[card.category] = { location: 'deck', index: drawIndex };
+                        keyMap[card.category] = {
+                            location: 'deck', index: drawIndex
+                        }
+
+                            ;
                     }
                 });
 
@@ -1139,6 +1376,7 @@
 
                         // Scenario B: Key is in Deck
                         if (keyInfo && keyInfo.location === 'deck') {
+
                             // If Sub appears BEFORE Key (DrawIndex < KeyIndex)
                             // Example: Sub at Draw 5, Key at Draw 20.
                             // We see Sub. Can't play. Discard.
@@ -1161,6 +1399,7 @@
 
                 // 4. Add Penalties for Buried Keys
                 let penalty = 0;
+
                 Object.values(keyMap).forEach(info => {
                     if (info.location === 'tableau') {
                         // 2 turns per card covering the key
@@ -1173,10 +1412,16 @@
 
             initializeDeck() {
                 let cards = [];
+
                 Object.values(this.activeCategories).forEach(cat => {
+
                     // Key Card
                     cards.push({
-                        id: `KEY_${cat.id}`,
+                        id: `KEY_$ {
+                                cat.id
+                            }
+
+                            `,
                         type: CARD_TYPES.KEY,
                         category: cat.id,
                         label: cat.label,
@@ -1186,7 +1431,15 @@
                     // Sub Cards
                     cat.activeItems.forEach((item, idx) => {
                         cards.push({
-                            id: `SUB_${cat.id}_${idx}`,
+                            id: `SUB_$ {
+                                    cat.id
+                                }
+
+                                _$ {
+                                    idx
+                                }
+
+                                `,
                             type: CARD_TYPES.SUB,
                             category: cat.id,
                             label: item,
@@ -1201,12 +1454,17 @@
             shuffle(array) {
                 for (let i = array.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    [array[i], array[j]] = [array[j], array[i]];
+                    [array[i],
+                    array[j]] = [array[j],
+                    array[i]];
                 }
             }
 
             dealInitialCards() {
-                this.state.tableauSlots = [[], [], [], []]; // Ensure clear
+                this.state.tableauSlots = [[],
+                [],
+                [],
+                []]; // Ensure clear
 
                 const totalCards = this.state.deck.length;
                 const dealCount = Math.floor(totalCards * 0.4); // 40%
@@ -1233,11 +1491,13 @@
 
                             // If Same Category
                             if (prevCard.category === candidate.category) {
+
                                 // Decide if we should avoid this
                                 if (Math.random() > allowClumping) {
                                     // Try to find a better candidate in the deck
                                     // Search from second-to-last downwards
                                     let swapIndex = -1;
+
                                     for (let d = this.state.deck.length - 2; d >= 0; d--) {
                                         if (this.state.deck[d].category !== prevCard.category) {
                                             swapIndex = d;
@@ -1284,7 +1544,9 @@
                         tableauSlots: [[], [], [], []],
                         turnsLeft: 0,
                         gameOver: false
-                    };
+                    }
+
+                        ;
                     this.setupGame(true); // Restart = Random Difficulty
                     this.ui.update(this.state);
                 }
@@ -1306,7 +1568,9 @@
                         // User didn't specify cost, let's make it free action but consume turn on Draw.
                         this.ui.update(this.state);
                         return;
-                    } else {
+                    }
+
+                    else {
                         return; // Both empty
                     }
                 }
@@ -1320,17 +1584,33 @@
 
             findCardLocation(cardId) {
                 const openIdx = this.state.openPile.findIndex(c => c.id === cardId);
-                if (openIdx !== -1) return { location: 'graveyard', index: -1, cardIndex: openIdx };
+
+                if (openIdx !== -1) return {
+                    location: 'graveyard', index: -1, cardIndex: openIdx
+                }
+
+                    ;
 
                 for (let i = 0; i < 4; i++) {
                     const idx = this.state.tableauSlots[i].findIndex(c => c.id === cardId);
-                    if (idx !== -1) return { location: 'tableau', index: i, cardIndex: idx };
+
+                    if (idx !== -1) return {
+                        location: 'tableau', index: i, cardIndex: idx
+                    }
+
+                        ;
                 }
 
                 for (let i = 0; i < 4; i++) {
                     const idx = this.state.sortingSlots[i].findIndex(c => c.id === cardId);
-                    if (idx !== -1) return { location: 'sorting', index: i, cardIndex: idx };
+
+                    if (idx !== -1) return {
+                        location: 'sorting', index: i, cardIndex: idx
+                    }
+
+                        ;
                 }
+
                 return null;
             }
 
@@ -1341,7 +1621,9 @@
 
                     if (!topCard) {
                         return card.type === CARD_TYPES.KEY;
-                    } else {
+                    }
+
+                    else {
                         return card.type === CARD_TYPES.SUB && card.category === topCard.category;
                     }
                 }
@@ -1360,12 +1642,16 @@
                     // Otherwise, must match category
                     return card.category === topCard.category;
                 }
+
                 return false;
             }
 
             handleDrop(cardId, targetType, targetIndex) {
                 const source = this.findCardLocation(cardId);
                 if (!source) return;
+
+                // BUG FIX: Prevent dropping onto self (which triggers reveal logic incorrectly)
+                if (source.location === targetType && source.index === targetIndex) return;
 
                 let pile = null;
                 if (source.location === 'graveyard') pile = this.state.openPile;
@@ -1396,33 +1682,41 @@
 
                         // Check for Category Completion (Slot Recycling)
                         const currentPile = this.state.sortingSlots[targetIndex];
+
                         if (currentPile.length > 0) {
                             const keyCard = currentPile[0];
                             const config = this.activeCategories[keyCard.category];
 
                             // Key + All Items
                             if (currentPile.length === (config.itemCount + 1)) {
-                                // Delay slightly for visual effect then clear? Or just clear.
-                                // For now, immediate clear with a small alert or just log.
-                                // Reactivity: The update() will show empty slot.
-
-                                // We can use setTimeout to let the user see the card land, 
-                                // but state update is synchronous. 
-                                // Let's just alert for now or trust the user sees the counter finish.
-
-                                // Actually, clearing it immediately might feel abrupt. 
-                                // But per rules: "Empty slot immediately".
                                 this.state.sortingSlots[targetIndex] = [];
-                                // Optional: You could add a 'completedCategories' count to state if shown in UI.
                             }
                         }
 
                         this.checkWinCondition();
-                    } else if (targetType === 'tableau') {
+                    }
+
+                    else if (targetType === 'tableau') {
                         this.state.tableauSlots[targetIndex].push(...cardsToMove);
                     }
 
                     this.ui.update(this.state);
+                }
+            }
+
+            tryAutoMoveKeyCard(cardId) {
+                // Find empty sorting slot
+                let targetSlotIndex = -1;
+
+                for (let i = 0; i < 4; i++) {
+                    if (this.state.sortingSlots[i].length === 0) {
+                        targetSlotIndex = i;
+                        break;
+                    }
+                }
+
+                if (targetSlotIndex !== -1) {
+                    this.handleDrop(cardId, 'sorting', targetSlotIndex);
                 }
             }
 
@@ -1438,8 +1732,8 @@
             }
 
             checkWinCondition() {
-                const totalCards = this.state.deck.length + this.state.openPile.length +
-                    this.state.tableauSlots.flat().length;
+                const totalCards = this.state.deck.length + this.state.openPile.length + this.state.tableauSlots.flat().length;
+
                 if (totalCards === 0) {
                     setTimeout(() => alert("축하합니다! 모든 카드를 정리했습니다!"), 100);
                 }
@@ -1448,7 +1742,7 @@
 
         const game = new Game();
         game.start();
-        window.game = game; 
+        window.game = game;
     </script>
 </body>
 
