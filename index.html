@@ -1006,40 +1006,38 @@
                     this.difficulty = difficulties[Math.floor(Math.random() * difficulties.length)];
                 }
 
-                let catMultiplier = 1.5;
-                let turnMultiplier = 2.0;
 
-                // User Specified Formulas:
-                // Category Count = Sorting Slots (4) * Percentage
-                // Turns = Min Turns * Multiplier
-                // Min Turns = Cards in Deck (Total - Tableau)
+
+                // User Specified Formulas (Explicit Counts):
+                // Easy: 5 cats, Heuristic * 1.3 (Generous)
+                // Normal: 6 cats, Heuristic * 1.1 (Standard)
+                // Hard: 7 cats, Heuristic * 0.9 (Requires Optimization)
+                // Extreme: 8 cats, Heuristic * 0.75 (Perfect Play / Minimal Waste)
+
+                let numCats = 4;
+                let turnMultiplier = 1.5;
+
                 switch (this.difficulty) {
                     case 'EASY':
-                        catMultiplier = 1.5; // 4 * 1.5 = 6
-                        turnMultiplier = 2.0;
+                        numCats = 5;
+                        turnMultiplier = 1.3;
                         break;
                     case 'NORMAL':
-                        catMultiplier = 2.5; // 4 * 2.5 = 10
-                        turnMultiplier = 1.6; // Slightly more generous than 1.5
+                        numCats = 6;
+                        turnMultiplier = 1.1;
                         break;
                     case 'HARD':
-                        catMultiplier = 3.5; // 4 * 3.5 = 14
-                        turnMultiplier = 1.2;
+                        numCats = 7;
+                        turnMultiplier = 0.9;
                         break;
                     case 'EXTREME':
-                        catMultiplier = 5.0; // 4 * 5.0 = 20
-                        turnMultiplier = 1.0; // Accurate One Pass
+                        numCats = 8;
+                        turnMultiplier = 0.75;
                         break;
                     default:
-                        catMultiplier = 2.5;
-                        turnMultiplier = 1.6;
+                        numCats = 6;
+                        turnMultiplier = 1.1;
                 }
-
-                // Fine adjustments
-                if (this.difficulty === 'NORMAL') turnMultiplier = 1.5;
-                if (this.difficulty === 'HARD') turnMultiplier = 1.1;
-
-                const numCats = Math.floor(4 * catMultiplier);
 
                 console.log(`[Game] Setup ${this.difficulty}: Cats=${numCats}, TurnMult=${turnMultiplier}`);
 
@@ -1083,18 +1081,94 @@
                 this.initializeDeck();
                 // Note: Deck is created but not dealt. totalCards is accurate.
 
-                // 4. Calculate Turns based on "Minimum Turns"
-                // Minimum Draws needed = Cards in Deck AFTER DEAL
-                // We deal 40% of cards to Tableau.
-                const cardsToDeal = Math.floor(totalCards * 0.4);
-                const cardsInDeck = totalCards - cardsToDeal;
-
-                console.log(`[Turn Calc] Total: ${totalCards}, Deal: ${cardsToDeal}, Deck: ${cardsInDeck} (MinTurns)`);
-
-                this.state.turnsLeft = Math.ceil(cardsInDeck * turnMultiplier);
-
-                // 5. Deal
+                // 4. Deal (MUST be done before Turn Calculation to know what's in Deck vs Tableau)
                 this.dealInitialCards();
+
+                // 5. Calculate Turns using Heuristic (Cycle Prediction)
+                const heuristicTurns = this.calculateHeuristicTurns();
+                console.log(`[Heuristic] Calculated Turns: ${heuristicTurns}`);
+
+                // Difficulty Multiplier Application (User Request: Min * Multiplier)
+                this.state.turnsLeft = Math.ceil(heuristicTurns * turnMultiplier);
+            }
+
+            calculateHeuristicTurns() {
+                // 1. Map Key Locations
+                // Map<CategoryId, { location: 'tableau'|'deck', index: number, depth?: number }>
+                const keyMap = {};
+
+                // Check Tableau
+                this.state.tableauSlots.forEach((pile, colIdx) => {
+                    pile.forEach((card, depth) => {
+                        if (card.type === 'KEY') {
+                            // Depth 0 = Bottom. But we access from Top? 
+                            // Access difficulty is length-1 - depth.
+                            // Actually, simply: If it's in Tableau, it's roughly "Cycle 1" accessible 
+                            // but adds a penalty for digging.
+                            const digCost = (pile.length - 1) - depth;
+                            keyMap[card.category] = { location: 'tableau', digCost: digCost };
+                        }
+                    });
+                });
+
+                // Check Deck
+                // Deck is a stack. pop() gets the last element.
+                // Draw Order: index K (length-1) is drawn 1st. Index 0 is drawn Last.
+                // Let's analyze "Draw Index" where 0 = First Drawn.
+                const deckSize = this.state.deck.length; // Remaining after deal
+                this.state.deck.forEach((card, arrayIdx) => {
+                    // arrayIdx 0 = Bottom. Draw Index = length - 1 - arrayIdx
+                    const drawIndex = deckSize - 1 - arrayIdx;
+                    if (card.type === 'KEY') {
+                        keyMap[card.category] = { location: 'deck', index: drawIndex };
+                    }
+                });
+
+                // 2. Analyze Sub Cards
+                let maxCycles = 1;
+
+                this.state.deck.forEach((card, arrayIdx) => {
+                    const drawIndex = deckSize - 1 - arrayIdx;
+
+                    if (card.type === 'SUB') {
+                        const keyInfo = keyMap[card.category];
+
+                        // Scenario A: Key is in Tableau
+                        // We can play this Sub in Cycle 1 (assuming we dug out the key).
+                        // If Dig Cost is high, simpler heuristic adds fixed penalty later.
+
+                        // Scenario B: Key is in Deck
+                        if (keyInfo && keyInfo.location === 'deck') {
+                            // If Sub appears BEFORE Key (DrawIndex < KeyIndex)
+                            // Example: Sub at Draw 5, Key at Draw 20.
+                            // We see Sub. Can't play. Discard.
+                            // We find Key at 20. Play.
+                            // We need to recycle to find Sub again. -> Cycle 2.
+                            if (drawIndex < keyInfo.index) {
+                                maxCycles = Math.max(maxCycles, 2);
+                            }
+                        }
+                    }
+                });
+
+                // 3. Calculate Base Turns
+                // Base = Cards in Deck * RequiresCycles
+                // If Cycle 2 needed, we essentially draw the whole deck once (Missed Subs), 
+                // then recycle, then draw again found Subs.
+                // Accurate turn count = DeckSize + (MissedSubsCount * RecycleCost?)
+                // Simple View: DeckSize * MaxCycles
+                let baseTurns = deckSize * maxCycles;
+
+                // 4. Add Penalties for Buried Keys
+                let penalty = 0;
+                Object.values(keyMap).forEach(info => {
+                    if (info.location === 'tableau') {
+                        // 2 turns per card covering the key
+                        penalty += (info.digCost * 2);
+                    }
+                });
+
+                return baseTurns + penalty;
             }
 
             initializeDeck() {
@@ -1137,11 +1211,55 @@
                 const totalCards = this.state.deck.length;
                 const dealCount = Math.floor(totalCards * 0.4); // 40%
 
-                // Distribute cards round-robin
+                // Smart Mixing Configuration
+                let allowClumping = 0.6; // Default Normal
+                if (this.difficulty === 'EASY') allowClumping = 1.0;
+                if (this.difficulty === 'NORMAL') allowClumping = 0.6;
+                if (this.difficulty === 'HARD') allowClumping = 0.3;
+                if (this.difficulty === 'EXTREME') allowClumping = 0.1;
+
+                // Distribute cards round-robin with Smart Mixing
                 for (let k = 0; k < dealCount; k++) {
                     if (this.state.deck.length > 0) {
-                        const card = this.state.deck.pop();
                         const colIndex = k % 4;
+                        const currentPile = this.state.tableauSlots[colIndex];
+
+                        // Peek at what we are about to deal
+                        let candidate = this.state.deck[this.state.deck.length - 1];
+
+                        // Check previous card in this column
+                        if (currentPile.length > 0) {
+                            const prevCard = currentPile[currentPile.length - 1];
+
+                            // If Same Category
+                            if (prevCard.category === candidate.category) {
+                                // Decide if we should avoid this
+                                if (Math.random() > allowClumping) {
+                                    // Try to find a better candidate in the deck
+                                    // Search from second-to-last downwards
+                                    let swapIndex = -1;
+                                    for (let d = this.state.deck.length - 2; d >= 0; d--) {
+                                        if (this.state.deck[d].category !== prevCard.category) {
+                                            swapIndex = d;
+                                            break;
+                                        }
+                                    }
+
+                                    if (swapIndex !== -1) {
+                                        // Swap found card to top
+                                        const temp = this.state.deck[this.state.deck.length - 1];
+                                        this.state.deck[this.state.deck.length - 1] = this.state.deck[swapIndex];
+                                        this.state.deck[swapIndex] = temp;
+
+                                        // Update candidate
+                                        candidate = this.state.deck[this.state.deck.length - 1];
+                                        // console.log(`[SmartMix] Swapped to avoid ${prevCard.category} clumping`);
+                                    }
+                                }
+                            }
+                        }
+
+                        const card = this.state.deck.pop();
                         this.state.tableauSlots[colIndex].push(card);
                     }
                 }
