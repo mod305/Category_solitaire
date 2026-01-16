@@ -30,10 +30,10 @@
             /* Dynamic Visual Scaling */
             --card-radius: calc(var(--card-width) * 0.1);
             /* 10% of width */
-            --card-font-size: calc(var(--card-width) * 0.2);
-            /* 20% of width for text */
-            --card-emoji-size: calc(var(--card-width) * 0.5);
-            /* 50% of width for emoji */
+            --card-font-size: calc(var(--card-width) * 0.25);
+            /* Increased from 0.2 to 0.25 (25%) */
+            --card-emoji-size: calc(var(--card-width) * 0.6);
+            /* Increased from 0.5 to 0.6 (60%) */
 
             --glass-bg: rgba(255, 255, 255, 0.1);
             --glass-border: rgba(255, 255, 255, 0.2);
@@ -224,6 +224,8 @@
             gap: var(--gap);
             justify-content: center;
             width: 100%;
+            padding-top: 45px;
+            /* Updated padding */
             padding-bottom: 10px;
             border-bottom: 1px solid var(--glass-border);
             margin-bottom: 5px;
@@ -268,7 +270,14 @@
         }
 
         .slot-base {
-            display: none;
+            width: 100%;
+            height: var(--card-height);
+            border-radius: var(--card-radius);
+            background: rgba(255, 255, 255, 0.05);
+            /* Faint background for visibility guide */
+            border: 2px dashed rgba(255, 255, 255, 0.1);
+            opacity: 0.5;
+            /* Ensure it occupies space */
         }
 
         /* Hide heavy bases in this clean layout */
@@ -346,9 +355,30 @@
             mask-size: contain;
         }
 
-        /* Sorting Slot Labels - Hidden in this compact view (optional, sticking to mobile plan which hid them) */
+        /* Sorting Slot Labels - Restore visibility */
         .sorting-slot::before {
-            display: none;
+            content: attr(data-label);
+            position: absolute;
+            top: -40px;
+            /* Moved further up */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150%;
+            /* Allow wider text */
+            text-align: center;
+            font-size: 0.8rem;
+            color: #ffffff;
+            /* FIX: White text for dark background */
+            white-space: pre-wrap;
+            /* Allow newlines */
+            line-height: 1.2;
+            /* Slightly increased line height */
+            font-weight: 700;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+            /* FIX: Dark shadow for contrast */
+            pointer-events: none;
+            display: block;
+            /* Ensure visibility */
         }
     </style>
 
@@ -468,9 +498,13 @@
                     col.className = 'tableau-column';
                     col.dataset.index = i;
 
+                    // FIX: Make the column itself the drop target (since base might be hidden or cards absolute)
+                    this.makeDroppable(col, 'tableau', i);
+
                     const base = document.createElement('div');
                     base.className = 'slot-base';
-                    this.makeDroppable(base, 'tableau', i);
+                    // base is hidden by CSS, so attaching here is useless for mouse events if display:none
+                    // But we keep it structure-wise if needed later.
 
                     col.appendChild(base);
                     this.tableauArea.appendChild(col);
@@ -737,17 +771,8 @@
                 this.dragGhost.style.width = getComputedStyle(e.target).width;
                 this.dragGhost.style.height = getComputedStyle(e.target).height;
 
-                this.dragGhost.style.left = `$ {
-                touch.clientX - 30
-            }
-
-            px`;
-
-                this.dragGhost.style.top = `$ {
-                touch.clientY - 40
-            }
-
-            px`;
+                this.dragGhost.style.left = `${touch.clientX - 30}px`;
+                this.dragGhost.style.top = `${touch.clientY - 40}px`;
                 this.dragGhost.style.opacity = '0.9';
                 this.dragGhost.style.zIndex = '1000';
                 this.dragGhost.style.pointerEvents = 'none'; // click-through
@@ -764,17 +789,8 @@
                 if (!this.dragGhost) return;
                 const touch = e.touches[0];
 
-                this.dragGhost.style.left = `$ {
-                touch.clientX - 30
-            }
-
-            px`;
-
-                this.dragGhost.style.top = `$ {
-                touch.clientY - 40
-            }
-
-            px`;
+                this.dragGhost.style.left = `${touch.clientX - 30}px`;
+                this.dragGhost.style.top = `${touch.clientY - 40}px`;
             }
 
             handleTouchEnd(e, card) {
@@ -794,35 +810,31 @@
 
                 if (droppedEl) {
                     // Traverse up to find a droppable zone or styled card
-                    // We need to identify if it's a Slot, Base, or Card in Tableau/Sorting
-
-                    let target = droppedEl.closest('.slot, .slot-base, .tableau-column .card');
+                    // Added .tableau-column to the selector
+                    let target = droppedEl.closest('.slot, .slot-base, .tableau-column, .card');
 
                     if (target) {
-                        // Extract type and index from the closest significant element
-                        // But wait, our 'makeDroppable' attached listeners to specific elements.
-                        // We need to map the element back to 'type' and 'index'.
-
-                        // If dropped on a card in tableau
-                        if (target.classList.contains('card') && target.dataset.sourceType === 'tableau') {
-                            const type = 'tableau';
-                            const index = parseInt(target.dataset.sourceIndex);
-                            this.game.handleDrop(this.touchDragCardId, type, index);
-                        }
-
-                        // If dropped on slot-base
-                        else if (target.classList.contains('slot-base')) {
-                            // Find parent column index?
-                            // Actually makeDroppable passed index. We can store it in dataset for fallback.
-                            // Our makeDroppable doesn't set dataset on base, but parent col has index.
-                            const col = target.closest('.tableau-column');
-
-                            if (col) {
-                                this.game.handleDrop(this.touchDragCardId, 'tableau', parseInt(col.dataset.index));
+                        // 1. Dropped on a Card (Tableau or Sorting)
+                        if (target.classList.contains('card')) {
+                            // If tableau card, get index
+                            if (target.dataset.sourceType === 'tableau') {
+                                this.game.handleDrop(this.touchDragCardId, 'tableau', parseInt(target.dataset.sourceIndex));
+                            }
+                            // If sorting card (implicit), bubble to slot?
+                            // Actually closest('.card') stops traversal.
+                            // If it's in sorting, we need to find the parent slot.
+                            else if (target.closest('.sorting-slot')) {
+                                const slot = target.closest('.sorting-slot');
+                                this.game.handleDrop(this.touchDragCardId, 'sorting', parseInt(slot.dataset.index));
                             }
                         }
 
-                        // If dropped on sorting slot
+                        // 2. Dropped on Tableau Column (Empty or Background)
+                        else if (target.classList.contains('tableau-column')) {
+                            this.game.handleDrop(this.touchDragCardId, 'tableau', parseInt(target.dataset.index));
+                        }
+
+                        // 3. Dropped on Sorting Slot (Empty)
                         else if (target.classList.contains('sorting-slot')) {
                             this.game.handleDrop(this.touchDragCardId, 'sorting', parseInt(target.dataset.index));
                         }
@@ -1090,11 +1102,7 @@
 
                     // Key Card
                     cards.push({
-                        id: `KEY_$ {
-                                cat.id
-                            }
-
-                            `,
+                        id: `KEY_${cat.id}`,
                         type: CARD_TYPES.KEY,
                         category: cat.id,
                         label: cat.label,
@@ -1104,15 +1112,7 @@
                     // Sub Cards
                     cat.activeItems.forEach((item, idx) => {
                         cards.push({
-                            id: `SUB_$ {
-                                    cat.id
-                                }
-
-                                _$ {
-                                    idx
-                                }
-
-                                `,
+                            id: `SUB_${cat.id}_${idx}`,
                             type: CARD_TYPES.SUB,
                             category: cat.id,
                             label: item,
