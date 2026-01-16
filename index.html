@@ -13,14 +13,31 @@
         :root {
             --bg-color: #1a1a2e;
             --text-color: #ffffff;
-            --card-width: 100px;
-            --card-height: 140px;
-            --gap: 16px;
             --primary-font: 'Noto Sans KR', sans-serif;
-            --card-radius: 12px;
+
+            /* Dynamic Card Size Configuration */
+            --app-max-width: 600px;
+            /* Cap width for desktop */
+            --app-padding: 12px;
+            /* Base width is either the viewport width OR the max width */
+            --base-width: min(100vw, var(--app-max-width));
+
+            /* Card Size Calculation based on 4 columns */
+            --card-width: calc((var(--base-width) - 32px) / 4 - 6px);
+            --card-height: calc(((var(--base-width) - 32px) / 4 - 6px) * 1.4);
+            --gap: 6px;
+
+            /* Dynamic Visual Scaling */
+            --card-radius: calc(var(--card-width) * 0.1);
+            /* 10% of width */
+            --card-font-size: calc(var(--card-width) * 0.2);
+            /* 20% of width for text */
+            --card-emoji-size: calc(var(--card-width) * 0.5);
+            /* 50% of width for emoji */
+
             --glass-bg: rgba(255, 255, 255, 0.1);
             --glass-border: rgba(255, 255, 255, 0.2);
-            --glass-border-subtle: rgba(255, 255, 255, 0.2);
+            --glass-border-subtle: rgba(255, 255, 255, 0.15);
         }
 
         * {
@@ -28,6 +45,7 @@
             margin: 0;
             padding: 0;
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -36,261 +54,63 @@
             font-family: var(--primary-font);
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             min-height: 100vh;
             overflow: hidden;
+            /* Prevent body scroll */
         }
 
-        /* 
-           Layout Strategy: 
-           3-Column Grid: [Left: Turn] [Center: Game Board] [Right: Deck]
-           This ensures the Game Board (Sorting + Tableau) is isolated and aligned perfectly.
-        */
+        /* MAIN APP CONTAINER - Fixed Vertical Grid */
         #app {
             display: grid;
-            grid-template-columns: 140px auto 260px;
-            gap: 40px;
-            padding: 24px;
-            max-width: 1400px;
+            grid-template-areas:
+                "header controls"
+                "sorting sorting"
+                "tableau tableau";
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto 1fr;
+            /* Header, Sorting, Tableau (Flexible) */
+            gap: 16px;
+            padding: var(--app-padding);
+
             width: 100%;
-            height: 90vh;
-            align-items: start;
+            max-width: var(--app-max-width);
+            /* Enforce mobile width on desktop */
+            height: 100vh;
+            height: 100dvh;
+
+            margin: 0 auto;
+            /* Center on desktop */
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            /* Shadow for desktop aesthetics */
+            background: #131323;
+            /* Slightly darker background for the "device" area */
         }
 
-        /* LEFT PANEL */
+        /* --- 1. HEADER (Left Top) --- */
         .left-panel {
-            display: flex;
-            justify-content: flex-start;
-            padding-top: 30px;
-            /* Visual alignment with top slots */
-        }
-
-        .turn-counter {
+            grid-area: header;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            width: var(--card-width);
-            height: var(--card-height);
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border-subtle);
-            border-radius: var(--card-radius);
-            backdrop-filter: blur(10px);
-        }
-
-        .turn-counter .label {
-            font-size: 0.8rem;
-            opacity: 0.7;
-            margin-bottom: 4px;
-        }
-
-        .turn-counter .value {
-            font-size: 2rem;
-            font-weight: 800;
-        }
-
-        .restart-btn {
-            width: var(--card-width);
-            height: 40px;
-            background: rgba(255, 82, 82, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: var(--card-radius);
-            color: white;
-            font-family: var(--primary-font);
-            font-weight: 700;
-            cursor: pointer;
-            margin-bottom: 16px;
-            /* Space between button and counter */
-            transition: background 0.2s;
-        }
-
-        .restart-btn:hover {
-            background: rgba(255, 82, 82, 1);
-        }
-
-        /* CENTER BOARD */
-        .center-board {
-            display: flex;
-            flex-direction: column;
-            gap: 40px;
-            /* Vertical gap between Sorting Area and Tableau Area */
-            align-items: center;
             width: 100%;
+            align-items: flex-start;
+            padding: 0;
         }
 
-        /* 
-           Crucial for Alignment:
-           Both Sorting Area and Tableau Area use the SAME Grid configuration.
-           This creates a "Room" of identical width and column positions.
-        */
-        .sorting-area,
-        .tableau-area {
-            display: grid;
-            grid-template-columns: repeat(4, var(--card-width));
-            gap: var(--gap);
-            justify-content: center;
-            width: 100%;
-        }
-
-        /* Tableau area needs height for the columns to expand downwards */
-        .tableau-area {
-            min-height: 400px;
-            align-items: start;
-        }
-
-        /* RIGHT PANEL */
-        .right-panel {
-            display: flex;
-            justify-content: flex-end;
-            padding-top: 30px;
-        }
-
-        .deck-area {
-            display: flex;
-            gap: var(--gap);
-        }
-
-        /* SLOTS & COLUMNS */
-        .slot {
-            width: var(--card-width);
-            height: var(--card-height);
-            border: 2px dashed var(--glass-border-subtle);
-            border-radius: var(--card-radius);
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .sorting-slot::before {
-            content: attr(data-label);
-            position: absolute;
-            top: -50px;
-            width: 100%;
-            text-align: center;
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: var(--text-color);
-            white-space: pre;
-            line-height: 1.4;
-        }
-
-        .tableau-column {
-            display: flex;
-            flex-direction: column;
-            width: var(--card-width);
-            position: relative;
-        }
-
-        .slot-base {
-            width: 100%;
-            height: var(--card-height);
-            border-radius: var(--card-radius);
-            background: rgba(0, 0, 0, 0.1);
-            border: 2px dashed rgba(255, 255, 255, 0.3);
-            /* Brighter Dashed Border */
-        }
-
-        /* --- CARD STYLING --- */
-        .card {
-            width: var(--card-width);
-            height: var(--card-height);
-            border-radius: var(--card-radius);
-            padding: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            cursor: grab;
-            position: absolute;
-            transition: top 0.2s ease, transform 0.2s ease;
-
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            /* Default: Center aligned */
-            align-items: center;
-            text-align: center;
-            font-weight: 700;
-            font-size: 1rem;
-            padding-top: 10px;
-            /* Space for label visibility */
-
-            background-color: white;
-            z-index: 10;
-        }
-
-        .card.key-card {
-            background-color: #ffffff;
-            border: 3px solid #ff5252;
-            color: #d32f2f;
-            font-weight: 900;
-            font-weight: 900;
-            justify-content: space-between;
-            padding-top: 15px;
-            /* Keep specific padding for Key Card */
-            padding-bottom: 5px;
-        }
-
-        /* Key Card Counter */
-        .key-counter {
-            font-size: 0.8rem;
-            color: #d32f2f;
-            opacity: 0.8;
-            margin-top: 5px;
-        }
-
-        .card.sub-card {
-            background-color: #ffffff;
-            border: 2px solid #448aff;
-            color: #333;
-        }
-
-        /* When a card is stacked under another (Tableau), align to top to show label */
-        .card.stacked-view {
-            justify-content: flex-start !important;
-            padding-top: 8px;
-        }
-
-        .card:active {
-            cursor: grabbing;
-            transform: scale(1.05);
-            z-index: 100 !important;
-        }
-
-        .card.back {
-            background-color: #E0D7D0;
-            border: 2px solid #BCAAA4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        /* Improved Rabbit Icon */
-        .card.back .rabbit-icon {
-            width: 60%;
-            height: 60%;
-            background-color: #3e2723;
-            -webkit-mask: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12,2C12,2 8,5 8,10C8,11.5 8.5,13 9,14C7,14 4,16 4,19C4,21 6,22 12,22C18,22 20,21 20,19C20,16 17,14 15,14C15.5,13 16,11.5 16,10C16,5 12,2 12,2M12,5C12.8,5 13.5,7 13.8,9C13.2,8.8 12.6,8.8 12,8.8C11.4,8.8 10.8,8.8 10.2,9C10.5,7 11.2,5 12,5Z"/></svg>') no-repeat center;
-            -webkit-mask-size: contain;
-            mask: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12,2C12,2 8,5 8,10C8,11.5 8.5,13 9,14C7,14 4,16 4,19C4,21 6,22 12,22C18,22 20,21 20,19C20,16 17,14 15,14C15.5,13 16,11.5 16,10C16,5 12,2 12,2M12,5C12.8,5 13.5,7 13.8,9C13.2,8.8 12.6,8.8 12,8.8C11.4,8.8 10.8,8.8 10.2,9C10.5,7 11.2,5 12,5Z"/></svg>') no-repeat center;
-            mask-size: contain;
-        }
-
-        .card.back span.label {
-            display: none;
-        }
-
-        /* --- DIFFICULTY UI --- */
         .difficulty-selector {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 5px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            width: 100%;
+            margin-bottom: 8px;
         }
 
         .diff-btn {
             border: none;
             border-radius: 4px;
-            padding: 4px 8px;
-            font-size: 0.75rem;
+            padding: 4px;
+            height: 28px;
+            font-size: 0.7rem;
             cursor: pointer;
             color: white;
             opacity: 0.6;
@@ -300,383 +120,235 @@
 
         .diff-btn.active {
             opacity: 1;
-            transform: scale(1.05);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transform: scale(1.02);
         }
 
         .diff-easy {
             background-color: #4CAF50;
         }
 
-        /* Green */
         .diff-normal {
             background-color: #2196F3;
         }
 
-        /* Blue */
         .diff-hard {
             background-color: #FF9800;
         }
 
-        /* Orange */
         .diff-extreme {
             background-color: #E91E63;
         }
 
-        /* Pink */
-
-        /* --- MOBILE RESPONSIVE --- */
-
-        /* 1. PORTRAIT (Vertical Layout) - Optimized for One Hand / Long View */
-        @media (max-width: 768px) and (orientation: portrait) {
-            :root {
-                /* Use vmin to ensure it fits width */
-                --card-width: 20vw;
-                --card-height: 28vw;
-                /* Ratio 1.4 */
-                --gap: 2vw;
-                --card-radius: 4px;
-            }
-
-            #app {
-                display: flex;
-                flex-direction: column;
-                height: 100vh;
-                height: 100dvh;
-                /* Dynamic Viewport Height for mobile browsers */
-                padding: 10px 5px;
-                gap: 10px;
-                overflow: hidden;
-                /* Prevent body scroll, handle inside tableau */
-                box-sizing: border-box;
-            }
-
-            /* TOP: Control Bar (Turns, Restart) */
-            .left-panel {
-                width: 100%;
-                height: 40px;
-                flex-direction: row;
-                justify-content: space-between;
-                align-items: center;
-                padding: 0 10px;
-                order: 1;
-                flex: none;
-            }
-
-            .left-panel>div {
-                flex-direction: row !important;
-                width: auto;
-                gap: 10px;
-            }
-
-            .turn-counter {
-                height: auto;
-                padding: 5px 10px;
-                flex-direction: row;
-            }
-
-            .restart-btn {
-                margin: 0;
-                padding: 5px 10px;
-                width: auto;
-                font-size: 0.8rem;
-            }
-
-            /* MIDDLE: Board */
-            .center-board {
-                width: 100%;
-                order: 2;
-                flex: 1;
-                /* Take remaining space */
-                gap: 10px;
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
-                /* Contain inner scroll */
-            }
-
-            .sorting-area {
-                /* Top of Board */
-                grid-template-columns: repeat(4, var(--card-width));
-                gap: var(--gap);
-                padding-bottom: 5px;
-                flex: none;
-                /* Fixed height */
-                justify-content: center;
-            }
-
-            .tableau-area {
-                /* Main Area */
-                grid-template-columns: repeat(4, var(--card-width));
-                gap: var(--gap);
-                flex: 1;
-                overflow-y: auto;
-                /* Scroll ONLY the tableau columns if needed */
-                min-height: 0;
-                justify-content: center;
-                padding-top: 10px;
-            }
-
-            /* Remove Bases visual noise in compact mode */
-            .slot-base {
-                border-color: rgba(255, 255, 255, 0.1);
-            }
-
-            /* BOTTOM: Deck & Grave */
-            .right-panel {
-                order: 3;
-                width: 100%;
-                height: 90px;
-                /* Fixed height for touch target */
-                flex-direction: row;
-                justify-content: center;
-                align-items: center;
-                gap: 30px;
-                padding: 0;
-                flex: none;
-                background: rgba(0, 0, 0, 0.2);
-                border-radius: 12px;
-            }
-
-            /* Adjust Fonts */
-            .card {
-                font-size: 0.75rem;
-                padding: 2px;
-                border-width: 1px;
-            }
-
-            .label {
-                font-size: 0.7rem !important;
-            }
-
-            .key-counter {
-                font-size: 0.6rem;
-                bottom: 2px;
-                right: 2px;
-            }
-
-            .sorting-slot::before {
-                display: none;
-            }
-
-            /* Hide helper text on mobile to save space */
+        .left-panel>div:last-child {
+            display: flex;
+            width: 100%;
+            gap: 10px;
         }
 
-        /* 2. LANDSCAPE (Horizontal Layout) - Scaled Down Desktop View */
-        @media (max-width: 900px) and (orientation: landscape) {
-            :root {
-                /* Smaller fixed size for landscape mobile */
-                --card-width: 60px;
-                --card-height: 84px;
-                --gap: 8px;
-            }
-
-            #app {
-                display: grid;
-                grid-template-columns: 80px 1fr 100px;
-                /* Compact columns */
-                height: 100vh;
-                height: 100dvh;
-                padding: 5px;
-                gap: 5px;
-                overflow: hidden;
-            }
-
-            /* Left: Controls */
-            .left-panel {
-                order: 1;
-                padding: 0;
-                justify-content: center;
-            }
-
-            .turn-counter {
-                width: 100%;
-                padding: 5px;
-                font-size: 0.8rem;
-            }
-
-            .restart-btn {
-                width: 100%;
-                margin-top: 10px;
-                padding: 5px;
-                font-size: 0.8rem;
-            }
-
-            /* Center: Board */
-            .center-board {
-                order: 2;
-                gap: 5px;
-            }
-
-            .sorting-area,
-            .tableau-area {
-                grid-template-columns: repeat(4, var(--card-width));
-                gap: var(--gap);
-                justify-content: center;
-            }
-
-            .tableau-area {
-                padding-top: 10px;
-                overflow-y: auto;
-            }
-
-            /* Right: Deck */
-            .right-panel {
-                order: 3;
-                padding: 10px 0;
-                gap: 15px;
-            }
-
-            .card {
-                font-size: 0.7rem;
-            }
-
-            .label {
-                font-size: 0.65rem !important;
-            }
-
-            .sorting-slot::before {
-                opacity: 0.5;
-                font-size: 0.6rem;
-                top: -15px;
-            }
+        .restart-btn {
+            background: rgba(255, 82, 82, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: var(--card-radius);
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            flex: 1;
+            /* Grow to fill space */
+            height: 44px;
+            font-size: 0.9rem;
         }
 
-        /* 3. MOBILE PORTRAIT (Vertical Layout) - The Requested Redesign */
-        @media (max-width: 768px) {
-            :root {
-                /* Dynamic Card Size: (100vw - padding) / 4 columns */
-                /* Assuming ~20px app padding + gaps */
-                --card-width: calc((100vw - 32px) / 4 - 6px);
-                --card-height: calc(((100vw - 32px) / 4 - 6px) * 1.4);
-                --gap: 6px;
-                --app-padding: 12px;
-            }
+        .restart-btn:active {
+            background: rgba(255, 82, 82, 1);
+            transform: scale(0.98);
+        }
 
-            body {
-                align-items: flex-start;
-                /* Align top */
-                padding: 0;
-            }
+        .turn-counter {
+            display: flex;
+            flex-direction: row;
+            /* Horizontal on mobile layout */
+            justify-content: center;
+            align-items: center;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border-subtle);
+            border-radius: var(--card-radius);
+            padding: 0 10px;
+            height: 44px;
+            gap: 8px;
+            min-width: 80px;
+        }
 
-            #app {
-                display: grid;
-                grid-template-areas:
-                    "header controls"
-                    "sorting sorting"
-                    "tableau tableau";
-                grid-template-columns: 1fr 1fr;
-                grid-template-rows: auto auto 1fr;
-                gap: 16px;
-                padding: var(--app-padding);
-                height: 100vh;
-                height: 100dvh;
-                max-width: 100%;
-                overflow-x: hidden;
-            }
+        .turn-counter .label {
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
 
-            /* Area 1: Header (Left) */
-            .left-panel {
-                grid-area: header;
-                display: flex;
-                flex-direction: column;
-                /* Stack Difficulty & Controls */
-                width: 100%;
-                align-items: flex-start;
-                padding: 0;
-            }
+        .turn-counter .value {
+            font-size: 1.2rem;
+            font-weight: 800;
+        }
 
-            /* Difficulty Buttons: Compact Grid */
-            .difficulty-selector {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 4px;
-                width: 100%;
-                margin-bottom: 8px;
-            }
+        /* --- 2. CONTROLS (Right Top) --- */
+        .right-panel {
+            grid-area: controls;
+            display: flex;
+            justify-content: flex-end;
+            align-items: flex-end;
+            /* Align to bottom of the header row */
+            width: 100%;
+            padding: 0;
+            height: 100%;
+            /* Fill height to align with left panel */
+        }
 
-            .diff-btn {
-                font-size: 0.6rem;
-                padding: 4px;
-                height: 24px;
-            }
+        .deck-area {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
 
-            /* Turn & Restart */
-            .left-panel>div {
-                width: 100%;
-            }
+        /* --- 3. SORTING AREA (Row 2) --- */
+        .center-board {
+            display: contents;
+            /* Unwrap container to use grid areas directly */
+        }
 
-            .turn-counter {
-                width: 50px;
-                height: 50px;
-            }
+        .sorting-area {
+            grid-area: sorting;
+            display: grid;
+            grid-template-columns: repeat(4, var(--card-width));
+            gap: var(--gap);
+            justify-content: center;
+            width: 100%;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 5px;
+        }
 
-            .turn-counter .value {
-                font-size: 1.2rem;
-            }
+        /* --- 4. TABLEAU AREA (Row 3, Main) --- */
+        .tableau-area {
+            grid-area: tableau;
+            display: grid;
+            grid-template-columns: repeat(4, var(--card-width));
+            gap: var(--gap);
+            justify-content: center;
+            width: 100%;
 
-            .restart-btn {
-                height: 36px;
-                font-size: 0.8rem;
-                flex: 1;
-            }
+            overflow-y: auto;
+            /* Internal scrolling for tableau */
+            padding-top: 10px;
+            min-height: 0;
+            /* Crucial for grid scroll */
+        }
 
-            /* Area 2: Controls (Right) */
-            .right-panel {
-                grid-area: controls;
-                display: flex;
-                flex-direction: column;
-                justify-content: flex-end;
-                /* Align bottom of cell */
-                align-items: flex-end;
-                padding: 0;
-                width: 100%;
-            }
+        .tableau-column {
+            display: flex;
+            flex-direction: column;
+            width: var(--card-width);
+            min-height: 200px;
+            /* Drop target size */
+            position: relative;
+        }
 
-            .deck-area {
-                display: flex;
-                flex-direction: row;
-                /* Side by Side */
-                gap: 10px;
-                align-items: center;
-            }
+        /* --- COMMON SLOTS & CARDS --- */
+        .slot {
+            width: var(--card-width);
+            height: var(--card-height);
+            border: 1px dashed var(--glass-border);
+            border-radius: var(--card-radius);
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.02);
+        }
 
-            /* Area 3: Sorting Slots (Row 2) */
-            .center-board {
-                display: contents;
-                /* Unwrap to grid */
-            }
+        .slot-base {
+            display: none;
+        }
 
-            .sorting-area {
-                grid-area: sorting;
-                display: flex;
-                justify-content: space-between;
-                width: 100%;
-                padding-bottom: 10px;
-                border-bottom: 1px solid var(--glass-border);
-                margin-bottom: 10px;
-            }
+        /* Hide heavy bases in this clean layout */
 
-            /* Area 4: Tableau (Row 3) */
-            .tableau-area {
-                grid-area: tableau;
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: var(--gap);
-                width: 100%;
-                justify-items: center;
-                /* Ensure columns have min height for drop targets */
-            }
+        .card {
+            width: var(--card-width);
+            height: var(--card-height);
+            border-radius: var(--card-radius);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+            position: absolute;
+            transition: top 0.15s ease, transform 0.15s ease;
 
-            .tableau-column {
-                /* Ensure column catches drops */
-                min-height: 200px;
-            }
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background-color: white;
+            z-index: 10;
 
-            /* Text Scaling */
-            .label {
-                font-size: 0.7rem;
-            }
+            padding: 4px;
+            font-size: var(--card-font-size);
+            border-width: 1px;
+        }
+
+        .card.key-card {
+            border: 2px solid #ff5252;
+            color: #d32f2f;
+            font-weight: 900;
+            justify-content: space-between;
+            padding-top: 8px;
+            padding-bottom: 4px;
+        }
+
+        .card.sub-card {
+            border: 1px solid #448aff;
+            color: #333;
+            font-weight: 700;
+        }
+
+        .card.stacked-view {
+            justify-content: flex-start !important;
+            padding-top: 4px;
+        }
+
+        .key-counter {
+            font-size: 0.6rem;
+            opacity: 0.9;
+            align-self: flex-end;
+            width: 100%;
+            text-align: right;
+            padding-right: 2px;
+        }
+
+        .card .label {
+            font-size: 0.75rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.1;
+        }
+
+        .card.back {
+            background-color: #E0D7D0;
+            border: 1px solid #BCAAA4;
+        }
+
+        .card.back .rabbit-icon {
+            width: 70%;
+            height: 70%;
+            background-color: #5D4037;
+            -webkit-mask: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12,2C12,2 8,5 8,10C8,11.5 8.5,13 9,14C7,14 4,16 4,19C4,21 6,22 12,22C18,22 20,21 20,19C20,16 17,14 15,14C15.5,13 16,11.5 16,10C16,5 12,2 12,2M12,5C12.8,5 13.5,7 13.8,9C13.2,8.8 12.6,8.8 12,8.8C11.4,8.8 10.8,8.8 10.2,9C10.5,7 11.2,5 12,5Z"/></svg>') no-repeat center;
+            -webkit-mask-size: contain;
+            mask: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12,2C12,2 8,5 8,10C8,11.5 8.5,13 9,14C7,14 4,16 4,19C4,21 6,22 12,22C18,22 20,21 20,19C20,16 17,14 15,14C15.5,13 16,11.5 16,10C16,5 12,2 12,2M12,5C12.8,5 13.5,7 13.8,9C13.2,8.8 12.6,8.8 12,8.8C11.4,8.8 10.8,8.8 10.2,9C10.5,7 11.2,5 12,5Z"/></svg>') no-repeat center;
+            mask-size: contain;
+        }
+
+        /* Sorting Slot Labels - Hidden in this compact view (optional, sticking to mobile plan which hid them) */
+        .sorting-slot::before {
+            display: none;
         }
     </style>
 
@@ -981,11 +653,12 @@
 
                 if (catConfig && catConfig.isImageMode && card.emoji && card.type !== 'KEY') {
                     label.textContent = card.emoji;
-                    label.style.fontSize = '2rem'; // Larger for emoji
+                    label.style.fontSize = 'var(--card-emoji-size)'; // Use CSS variable
                 }
 
                 else {
                     label.textContent = card.label;
+                    label.style.fontSize = ''; // Reset to inherit from .card
                 }
 
                 el.appendChild(label);
