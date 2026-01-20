@@ -466,11 +466,16 @@
 
                 buttons.forEach(btn => {
                     btn.onclick = () => {
-                        // Update UI
-                        buttons.forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        // Update Game Config and Restart
-                        this.game.setDifficulty(btn.dataset.diff);
+                        // Prevent accidental click if already active (Optional, but good UX)
+                        if (btn.classList.contains('active')) return;
+
+                        if (confirm("난이도를 변경하시겠습니까?\n(게임이 초기화됩니다)")) {
+                            // Update UI
+                            buttons.forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            // Update Game Config and Restart
+                            this.game.setDifficulty(btn.dataset.diff);
+                        }
                     }
 
                         ;
