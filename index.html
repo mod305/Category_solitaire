@@ -1063,12 +1063,9 @@
                 const keyStatus = {}; // { catId: boolean }
                 Object.keys(this.activeCategories).forEach(k => keyStatus[k] = false);
 
-                // Analyze Tableau Cost (Interactive Cost)
-                // We count 1 turn per card in tableau as a base "Interact Cost".
-                let tableauCost = 0;
+                // Analyze Tableau (Snapshot Key Status only, no cost)
                 this.state.tableauSlots.forEach(pile => {
                     pile.forEach((card) => {
-                        tableauCost++;
                         if (card.type === 'KEY') keyStatus[card.category] = true;
                     });
                 });
@@ -1117,8 +1114,8 @@
                     console.warn("[Inductive] Safety limit reached, adding remaining penalty.");
                 }
 
-                // Total = Draw Actions + Tableau Interact Cost
-                return totalDrawActions + tableauCost;
+                // Total = Draw Actions Only (Tableau moves are free)
+                return totalDrawActions;
             }
 
 
