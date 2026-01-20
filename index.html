@@ -909,76 +909,97 @@
                         break;
                     case 'NORMAL':
                         numCats = 6;
-                        turnMultiplier = 1.1;
+                        turnMultiplier = 1.0; // Slightly tighter
                         break;
                     case 'HARD':
                         numCats = 7;
-                        turnMultiplier = 0.9;
+                        turnMultiplier = 0.8; // Reduced from 0.9
                         break;
                     case 'EXTREME':
                         numCats = 8;
-                        turnMultiplier = 0.75;
+                        turnMultiplier = 0.6; // Drastically reduced from 0.75
                         break;
                     default:
                         numCats = 6;
-                        turnMultiplier = 1.1;
+                        turnMultiplier = 1.0;
                 }
 
-                console.log(`[Game] Setup $ {
-                        this.difficulty
-                    }
+                console.log(`[Game] Setup ${this.difficulty}: Cats=${numCats}, TurnMult=${turnMultiplier}`);
 
-                    : Cats=$ {
-                        numCats
-                    }
-
-                    , TurnMult=$ {
-                        turnMultiplier
-                    }
-
-                    `);
-
-                // 1. Randomize Category Selection
+                // 1. Smart Category Selection (No Duplicates)
                 const poolKeys = Object.keys(CATEGORIES_POOL);
-
                 // Shuffle pool keys
                 for (let i = poolKeys.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    [poolKeys[i],
-                    poolKeys[j]] = [poolKeys[j],
-                    poolKeys[i]];
+                    [poolKeys[i], poolKeys[j]] = [poolKeys[j], poolKeys[i]];
                 }
 
-                const safeNumCats = Math.min(numCats, poolKeys.length);
-                const selectedKeys = poolKeys.slice(0, safeNumCats);
+                // Global used sets for this game session
+                const usedItems = new Set();
+                const usedEmojis = new Set();
 
-                // 2. Setup Active Categories
-                this.activeCategories = {}
-
-                    ;
+                this.activeCategories = {};
                 let totalCards = 0;
+                let catsAdded = 0;
 
-                selectedKeys.forEach(key => {
+                for (const key of poolKeys) {
+                    if (catsAdded >= numCats) break;
+
                     const template = CATEGORIES_POOL[key];
+                    const validIndices = [];
 
-                    // Random Item Count (3 to 8)
-                    let itemCount = 3 + Math.floor(Math.random() * 6);
-                    itemCount = Math.min(itemCount, template.items.length);
+                    // Filter items that clash with already used ones
+                    template.items.forEach((item, idx) => {
+                        const emoji = template.emojis ? template.emojis[idx] : null;
 
-                    // Image Mode Change (20%)
-                    const isImageMode = Math.random() < 0.2;
+                        // Check strict duplication
+                        if (!usedItems.has(item) && (!emoji || !usedEmojis.has(emoji))) {
+                            validIndices.push(idx);
+                        }
+                    });
 
-                    this.activeCategories[key] = {
-                        ...template,
-                        itemCount: itemCount,
-                        isImageMode: isImageMode,
-                        activeItems: template.items.slice(0, itemCount),
-                        activeEmojis: template.emojis ? template.emojis.slice(0, itemCount) : []
+                    // If we have enough valid items (min 3)
+                    if (validIndices.length >= 3) {
+                        // Decide item count for this category (Random 3 to 8, but capped by valid count)
+                        let targetCount = 3 + Math.floor(Math.random() * 6);
+                        targetCount = Math.min(targetCount, validIndices.length);
+
+                        // Select subset of valid indices
+                        // Shuffle validIndices first to pick random valid items
+                        for (let i = validIndices.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [validIndices[i], validIndices[j]] = [validIndices[j], validIndices[i]];
+                        }
+                        const selectedIndices = validIndices.slice(0, targetCount);
+
+                        // Build Active Data
+                        const activeItems = selectedIndices.map(i => template.items[i]);
+                        const activeEmojis = template.emojis ? selectedIndices.map(i => template.emojis[i]) : [];
+
+                        // Register used
+                        activeItems.forEach(item => usedItems.add(item));
+                        activeEmojis.forEach(emoji => { if (emoji) usedEmojis.add(emoji); });
+
+                        // Image Mode Change (20%)
+                        const isImageMode = Math.random() < 0.2;
+
+                        this.activeCategories[key] = {
+                            ...template,
+                            itemCount: targetCount,
+                            isImageMode: isImageMode,
+                            activeItems: activeItems,
+                            activeEmojis: activeEmojis
+                        };
+
+                        totalCards += (1 + targetCount);
+                        catsAdded++;
                     }
+                    // Else: Skip this category as it conflicts too much
+                }
 
-                        ;
-                    totalCards += (1 + itemCount); // 1 Key + Items
-                });
+                if (catsAdded < numCats) {
+                    console.warn(`[Setup] Could only find ${catsAdded} non-conflicting categories out of ${numCats} requested.`);
+                }
 
                 // 3. Initialize Deck (Create Card Objects)
                 this.initializeDeck();
