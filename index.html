@@ -1052,7 +1052,7 @@
                     case 'EASY': perfMultiplier = 1.5; break;
                     case 'NORMAL': perfMultiplier = 1.3; break;
                     case 'HARD': perfMultiplier = 1.15; break;
-                    case 'EXTREME': perfMultiplier = 1.05; break;
+                    case 'EXTREME': perfMultiplier = 1.0; break;
                 }
 
                 this.state.turnsLeft = Math.ceil(inductiveTurns * perfMultiplier);
@@ -1170,7 +1170,7 @@
                 []]; // Ensure clear
 
                 const totalCards = this.state.deck.length;
-                const dealCount = Math.floor(totalCards * 0.4); // 40%
+                const dealCount = Math.floor(totalCards * 0.6); // 60% (Increased from 40%)
 
                 // Smart Mixing Configuration
                 let allowClumping = 0.6; // Default Normal
