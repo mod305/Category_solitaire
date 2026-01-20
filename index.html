@@ -942,19 +942,19 @@
                         break;
                     case 'NORMAL':
                         numCats = 6;
-                        turnMultiplier = 1.0; // Slightly tighter
+                        turnMultiplier = 1.05; // Slightly balanced
                         break;
                     case 'HARD':
                         numCats = 7;
-                        turnMultiplier = 0.75; // Reduced from 0.8
+                        turnMultiplier = 0.8;
                         break;
                     case 'EXTREME':
                         numCats = 8;
-                        turnMultiplier = 0.42; // Reduced by 30% from 0.6
+                        turnMultiplier = 0.55; // Relaxed from 0.42 based on feedback
                         break;
                     default:
                         numCats = 6;
-                        turnMultiplier = 1.0;
+                        turnMultiplier = 1.05;
                 }
 
                 console.log(`[Game] Setup ${this.difficulty}: Cats=${numCats}, TurnMult=${turnMultiplier}`);
@@ -1041,113 +1041,89 @@
                 // 4. Deal (MUST be done before Turn Calculation to know what's in Deck vs Tableau)
                 this.dealInitialCards();
 
-                // 5. Calculate Turns using Heuristic (Cycle Prediction)
-                const heuristicTurns = this.calculateHeuristicTurns();
+                // 5. Calculate Turns using Inductive Simulation (Safe Cycle Count)
+                const inductiveTurns = this.calculateInductiveTurns();
+                console.log(`[Inductive] Min Turns: ${inductiveTurns}`);
 
-                console.log(`[Heuristic] Calculated Turns: $ {
-                        heuristicTurns
-                    }
+                // Difficulty Multiplier Application
+                // Calibrated for Inductive Baseline (Theoretical Minimum):
+                let perfMultiplier = 1.3;
+                switch (this.difficulty) {
+                    case 'EASY': perfMultiplier = 1.5; break;
+                    case 'NORMAL': perfMultiplier = 1.3; break;
+                    case 'HARD': perfMultiplier = 1.15; break;
+                    case 'EXTREME': perfMultiplier = 1.05; break;
+                }
 
-                    `);
-
-                // Difficulty Multiplier Application (User Request: Min * Multiplier)
-                this.state.turnsLeft = Math.ceil(heuristicTurns * turnMultiplier);
+                this.state.turnsLeft = Math.ceil(inductiveTurns * perfMultiplier);
             }
 
-            calculateHeuristicTurns() {
+            calculateInductiveTurns() {
+                // 1. Snapshot State & Setup
+                const keyStatus = {}; // { catId: boolean }
+                Object.keys(this.activeCategories).forEach(k => keyStatus[k] = false);
 
-                // 1. Map Key Locations
-                // Map<CategoryId, { location: 'tableau'|'deck', index: number, depth?: number }>
-                const keyMap = {}
-
-                    ;
-
-                // Check Tableau
-                this.state.tableauSlots.forEach((pile, colIdx) => {
-                    pile.forEach((card, depth) => {
-                        if (card.type === 'KEY') {
-                            // Depth 0 = Bottom. But we access from Top? 
-                            // Access difficulty is length-1 - depth.
-                            // Actually, simply: If it's in Tableau, it's roughly "Cycle 1" accessible 
-                            // but adds a penalty for digging.
-                            const digCost = (pile.length - 1) - depth;
-
-                            keyMap[card.category] = {
-                                location: 'tableau', digCost: digCost
-                            }
-
-                                ;
-                        }
+                // Analyze Tableau Cost (Interactive Cost)
+                // We count 1 turn per card in tableau as a base "Interact Cost".
+                let tableauCost = 0;
+                this.state.tableauSlots.forEach(pile => {
+                    pile.forEach((card) => {
+                        tableauCost++;
+                        if (card.type === 'KEY') keyStatus[card.category] = true;
                     });
                 });
 
-                // Check Deck
-                // Deck is a stack. pop() gets the last element.
-                // Draw Order: index K (length-1) is drawn 1st. Index 0 is drawn Last.
-                // Let's analyze "Draw Index" where 0 = First Drawn.
-                const deckSize = this.state.deck.length; // Remaining after deal
+                // Analyze Deck (Inductive Simulation)
+                // Deck array in state: [Bottom ... Top] (pop() takes from end)
+                // Simulation Loop: We draw from Top to Bottom to simulate real draws.
 
-                this.state.deck.forEach((card, arrayIdx) => {
-                    // arrayIdx 0 = Bottom. Draw Index = length - 1 - arrayIdx
-                    const drawIndex = deckSize - 1 - arrayIdx;
+                let remainingDeck = [...this.state.deck];
+                let totalDrawActions = 0;
+                let safety = 0;
 
-                    if (card.type === 'KEY') {
-                        keyMap[card.category] = {
-                            location: 'deck', index: drawIndex
-                        }
+                // Max 10 cycles to prevent infinite loops (Safe Guard)
+                while (remainingDeck.length > 0 && safety < 10) {
+                    safety++;
+                    const nextRoundDetails = []; // Cards that survive this round (discarded & recycled)
 
-                            ;
-                    }
-                });
+                    // Iterate Top to Bottom (Drawing)
+                    for (let i = remainingDeck.length - 1; i >= 0; i--) {
+                        totalDrawActions++;
+                        const card = remainingDeck[i];
 
-                // 2. Analyze Sub Cards
-                let maxCycles = 1;
-
-                this.state.deck.forEach((card, arrayIdx) => {
-                    const drawIndex = deckSize - 1 - arrayIdx;
-
-                    if (card.type === 'SUB') {
-                        const keyInfo = keyMap[card.category];
-
-                        // Scenario A: Key is in Tableau
-                        // We can play this Sub in Cycle 1 (assuming we dug out the key).
-                        // If Dig Cost is high, simpler heuristic adds fixed penalty later.
-
-                        // Scenario B: Key is in Deck
-                        if (keyInfo && keyInfo.location === 'deck') {
-
-                            // If Sub appears BEFORE Key (DrawIndex < KeyIndex)
-                            // Example: Sub at Draw 5, Key at Draw 20.
-                            // We see Sub. Can't play. Discard.
-                            // We find Key at 20. Play.
-                            // We need to recycle to find Sub again. -> Cycle 2.
-                            if (drawIndex < keyInfo.index) {
-                                maxCycles = Math.max(maxCycles, 2);
+                        let handled = false;
+                        if (card.type === 'KEY') {
+                            keyStatus[card.category] = true;
+                            handled = true;
+                        } else if (card.type === 'SUB') {
+                            if (keyStatus[card.category]) {
+                                handled = true;
                             }
                         }
+
+                        if (!handled) {
+                            // If not handled, it goes to the "Discard Pile"
+                            // In the next cycle, the Discard Pile is flipped and becomes the Deck.
+                            // Effectively, the relative order is preserved (FIFO).
+                            nextRoundDetails.unshift(card);
+                        }
                     }
-                });
+                    remainingDeck = nextRoundDetails;
+                }
 
-                // 3. Calculate Base Turns
-                // Base = Cards in Deck * RequiresCycles
-                // If Cycle 2 needed, we essentially draw the whole deck once (Missed Subs), 
-                // then recycle, then draw again found Subs.
-                // Accurate turn count = DeckSize + (MissedSubsCount * RecycleCost?)
-                // Simple View: DeckSize * MaxCycles
-                let baseTurns = deckSize * maxCycles;
+                // If safety triggered, just add remaining cards as penalty
+                if (remainingDeck.length > 0) {
+                    totalDrawActions += remainingDeck.length;
+                    console.warn("[Inductive] Safety limit reached, adding remaining penalty.");
+                }
 
-                // 4. Add Penalties for Buried Keys
-                let penalty = 0;
-
-                Object.values(keyMap).forEach(info => {
-                    if (info.location === 'tableau') {
-                        // 2 turns per card covering the key
-                        penalty += (info.digCost * 2);
-                    }
-                });
-
-                return baseTurns + penalty;
+                // Total = Draw Actions + Tableau Interact Cost
+                return totalDrawActions + tableauCost;
             }
+
+
+
+
 
             initializeDeck() {
                 let cards = [];
