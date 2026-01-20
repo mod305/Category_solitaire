@@ -572,43 +572,73 @@
                 // 2. Tableau
                 const cols = document.querySelectorAll('.tableau-column');
 
+                // Calculate measures for dynamic spacing
+                const tableauHeight = this.tableauArea.clientHeight;
+                // Approx card height (width / 4 * 1.4 ratio from CSS) or just use a safe fixed value typical for mobile
+                // Let's rely on a robust estimation: 
+                const cardHeightPx = this.tableauArea.clientWidth / 4 * 1.4;
+                const maxColumnH = Math.max(tableauHeight, 400); // Ensure at least 400px base space
+
                 cols.forEach((col, i) => {
                     const pile = state.tableauSlots[i];
                     const cards = col.querySelectorAll('.card');
                     cards.forEach(c => c.remove());
 
+                    // Dynamic Spacing Calculation
+                    let spacing = 35; // Default standard spacing
+                    if (pile.length > 1) {
+                        // How much space do we need at default spacing?
+                        const totalNeeded = (pile.length - 1) * spacing + cardHeightPx;
+
+                        // Available space in the column container? 
+                        // The container stretches, but we want to fit in the VIEW.
+                        // Let's use the tableauArea height as the constraint.
+                        if (totalNeeded > maxColumnH) {
+                            // Squeeze: (Available - CardHeight) / (Count - 1)
+                            spacing = (maxColumnH - cardHeightPx - 20) / (pile.length - 1);
+                            spacing = Math.max(15, spacing); // Hard floor
+                        }
+                    }
+
                     pile.forEach((card, cardIndex) => {
                         const isLast = cardIndex === pile.length - 1;
                         let cardEl;
-
-                        // Use persistent faceUp state OR default to isLast if undefined (safe fallback)
                         const isFaceUp = card.faceUp === true;
 
                         if (isFaceUp) {
-                            // Front Face
                             cardEl = this.createCardElement(card);
                             cardEl.draggable = true;
 
-                            // If this card is NOT the last one (i.e. covered by others), align text to top
+                            // Stacked view for covered cards
                             if (!isLast && card.type !== 'KEY') {
                                 cardEl.classList.add('stacked-view');
                             }
-                        }
 
-                        else {
-                            // Back Face
+                            // Dynamic Font Scaling if squished
+                            if (spacing < 28) {
+                                const label = cardEl.querySelector('.label');
+                                if (label) {
+                                    // Scale linear from 28px(100%) down to 15px(small)
+                                    // 28 -> 100%, 15 -> 70%
+                                    const scale = 0.7 + (0.3 * (spacing - 15) / 13);
+                                    label.style.fontSize = `${Math.max(0.6, scale)}em`;
+
+                                    // If really tight, hide emoji/extra padding if possible?
+                                    if (spacing < 20) {
+                                        cardEl.style.paddingTop = '2px';
+                                    }
+                                }
+                            }
+                        } else {
                             cardEl = document.createElement('div');
                             cardEl.className = 'card back';
-
-                            // Rabbit Icon for back
                             const rabbit = document.createElement('div');
                             rabbit.className = 'rabbit-icon';
                             cardEl.appendChild(rabbit);
-
                             cardEl.draggable = false;
                         }
 
-                        cardEl.style.top = `${cardIndex * 35}px`;
+                        cardEl.style.top = `${cardIndex * spacing}px`;
                         cardEl.style.zIndex = cardIndex + 1;
 
                         cardEl.dataset.sourceType = 'tableau';
@@ -619,9 +649,7 @@
                             cardEl.style.cursor = 'default';
                         }
 
-                        // FIX: Make the card itself droppable so we can stack on it
                         this.makeDroppable(cardEl, 'tableau', i);
-
                         col.appendChild(cardEl);
                     });
                 });
